@@ -1,65 +1,67 @@
 use macroquad::prelude::*;
 
+const PLAYER_RADIUS: f32 = 20.0;
+const PLAYER_MAX_SPEED: f32 = 5.0;
+const PLAYER_ACCELERATION: f32 = 1.0;
+const PLAYER_FRICTION: f32 = 0.9;
+
 #[derive(Debug, Clone)]
 pub struct Player {
-    pub x: f32,
-    pub y: f32,
-    
-    pub vx: f32,
-    pub vy: f32,
+    pub pos: Vec2,
+    pub vel: Vec2,
     pub v_max: f32,
 }
 
 impl Player {
     pub fn new(x: f32, y: f32) -> Self {
         Self {
-            x,
-            y,
-            vx: 0.0,
-            vy: 0.0,
-            v_max: 5.0,
+            pos: Vec2::new(x, y),
+            vel: Vec2::ZERO,
+            v_max: PLAYER_MAX_SPEED,
         }
+    }
+
+    pub fn radius(&self) -> f32 {
+        PLAYER_RADIUS
     }
 
     pub fn draw(&self) {
-        draw_circle(self.x, self.y, 20.0, YELLOW);
+        draw_circle(self.pos.x, self.pos.y, PLAYER_RADIUS, YELLOW);
     }
 
     pub fn input(&mut self) {
+        let mut acceleration = Vec2::ZERO;
+
         if is_key_down(KeyCode::Left) {
-            self.vx -= 1.0;
+            acceleration.x -= PLAYER_ACCELERATION;
         }
         if is_key_down(KeyCode::Right) {
-            self.vx += 1.0;
+            acceleration.x += PLAYER_ACCELERATION;
         }
         if is_key_down(KeyCode::Up) {
-            self.vy -= 1.0;
+            acceleration.y -= PLAYER_ACCELERATION;
         }
         if is_key_down(KeyCode::Down) {
-            self.vy += 1.0;
+            acceleration.y += PLAYER_ACCELERATION;
         }
 
-        // Clamp velocity
-        if self.vx > self.v_max {
-            self.vx = self.v_max;
-        }
-        if self.vx < -self.v_max {
-            self.vx = -self.v_max;
-        }
-        if self.vy > self.v_max {
-            self.vy = self.v_max;
-        }
-        if self.vy < -self.v_max {
-            self.vy = -self.v_max;
-        }
+        self.vel += acceleration;
+
+        // Clamp velocity to max speed with proper normalization
+        self.clamp_velocity();
     }
 
     pub fn update(&mut self) {
-        self.x += self.vx;
-        self.y += self.vy;
+        self.pos += self.vel;
 
-        // Friction
-        self.vx *= 0.9;
-        self.vy *= 0.9;
+        // Apply friction
+        self.vel *= PLAYER_FRICTION;
+    }
+
+    fn clamp_velocity(&mut self) {
+        let speed = self.vel.length();
+        if speed > self.v_max {
+            self.vel = self.vel.normalize() * self.v_max;
+        }
     }
 }

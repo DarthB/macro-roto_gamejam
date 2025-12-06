@@ -5,59 +5,66 @@ use player::Player;
 
 const DT: f64 = 1.0 / 30.0;
 
+const ENEMY_RADIUS: f32 = 15.0;
+const ENEMY_MAX_SPEED: f32 = 3.0;
+const ENEMY_ACCELERATION: f32 = 0.15;
+const SPAWN_TARGET_OFFSET: f32 = 50.0;
+const OUT_OF_BOUNDS_MARGIN: f32 = 50.0;
+
 struct Enemy {
-    x: f32,
-    y: f32,
-
-    vx: f32,
-    vy: f32,
+    pos: Vec2,
+    vel: Vec2,
     v_max: f32,
-
     acc: f32,
 }
 
 impl Enemy {
     pub fn spawn(x: f32, y: f32, v_max: f32) -> Self {
         // random velocity to target on a circle in the center of the screen:
-        let tx = screen_width() / 2.0 + rand::gen_range(-50.0, 50.0);
-        let ty = screen_height() / 2.0 + rand::gen_range(-50.0, 50.0);
+        let tx = screen_width() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
+        let ty = screen_height() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
 
-        let dir_x = tx - x;
-        let dir_y = ty - y;
-        let len = (dir_x * dir_x + dir_y * dir_y).sqrt();
-        let vx = dir_x / len * rand::gen_range(1.0, v_max);
-        let vy = dir_y / len * rand::gen_range(1.0, v_max);
-        
+        let target = Vec2::new(tx, ty);
+        let spawn_pos = Vec2::new(x, y);
+        let dir = (target - spawn_pos).normalize();
+        let speed = rand::gen_range(1.0, v_max);
+        let vel = dir * speed;
+
         Self {
-            x,
-            y,
-            vx,            
-            vy,
-            v_max: 3.0,
-            acc: 0.15,
+            pos: spawn_pos,
+            vel,
+            v_max,
+            acc: ENEMY_ACCELERATION,
         }
+    }
+
+    pub fn radius(&self) -> f32 {
+        ENEMY_RADIUS
     }
 
     pub fn draw(&self) {
-        draw_circle(self.x, self.y, 15.0, RED);
+        draw_circle(self.pos.x, self.pos.y, ENEMY_RADIUS, RED);
     }
 
     pub fn update(&mut self) {
-        // add acceleration:
-        let accx = self.acc * if self.vx < 0.0 { -1.0 } else { 1.0 };
-        let accy = self.acc * if self.vy < 0.0 { -1.0 } else { 1.0 };
-        self.vx += accx;
-        self.vy += accy;    
-        
-        // clamp velocity
-        let v = (self.vx * self.vx + self.vy * self.vy).sqrt();
-        if v > self.v_max {
-            self.vx = self.vx / v * self.v_max;
-            self.vy = self.vy / v * self.v_max;
-        }
+        // add acceleration in current direction
+        let acc_dir = Vec2::new(
+            if self.vel.x < 0.0 { -1.0 } else { 1.0 },
+            if self.vel.y < 0.0 { -1.0 } else { 1.0 },
+        );
+        self.vel += acc_dir * self.acc;
 
-        self.x += self.vx;
-        self.y += self.vy;
+        // clamp velocity to max speed
+        self.clamp_velocity();
+
+        self.pos += self.vel;
+    }
+
+    fn clamp_velocity(&mut self) {
+        let speed = self.vel.length();
+        if speed > self.v_max {
+            self.vel = self.vel.normalize() * self.v_max;
+        }
     }
 }
 
@@ -81,23 +88,27 @@ impl GameState {
     }
 
     fn check_collisions(&mut self) {
-        let enemies_collided_with_player: Vec<usize> = self.enemies.iter().enumerate().filter_map(|(i, enemy)| {
-            let dx = self.player.x - enemy.x;
-            let dy = self.player.y - enemy.y;
-            let dist_sq = dx * dx + dy * dy;
-            let radii_sum = 20.0 + 15.0;
-            if dist_sq < radii_sum * radii_sum {
-                Some(i)
-            } else {
-                None
-            }
-        }).collect();
+        let enemies_collided_with_player: Vec<usize> = self
+            .enemies
+            .iter()
+            .enumerate()
+            .filter_map(|(i, enemy)| {
+                let delta = self.player.pos - enemy.pos;
+                let dist_sq = delta.length_squared();
+                let radii_sum = self.player.radius() + enemy.radius();
+                if dist_sq < radii_sum * radii_sum {
+                    Some(i)
+                } else {
+                    None
+                }
+            })
+            .collect();
 
         // no health system, just game over on first collision
         if !enemies_collided_with_player.is_empty() {
             self.b_game_over = true;
         }
-        
+
         // later remove collided enemies
         for &i in enemies_collided_with_player.iter().rev() {
             self.despawn_enemy(i);
@@ -112,9 +123,12 @@ impl GameState {
         let w = screen_width();
         let h = screen_height();
         self.enemies.retain(|enemy| {
-            enemy.x >= -50.0 && enemy.x <= w + 50.0 && enemy.y >= -50.0 && enemy.y <= h + 50.0
+            enemy.pos.x >= -OUT_OF_BOUNDS_MARGIN
+                && enemy.pos.x <= w + OUT_OF_BOUNDS_MARGIN
+                && enemy.pos.y >= -OUT_OF_BOUNDS_MARGIN
+                && enemy.pos.y <= h + OUT_OF_BOUNDS_MARGIN
         });
-    }   
+    }
 }
 
 fn input(gs: &mut GameState) {
@@ -138,7 +152,13 @@ fn draw(gs: &GameState) {
     for enemy in gs.enemies.iter() {
         enemy.draw();
     }
-    draw_text("Move the Player with arrow keys", 20.0, 20.0, 20.0, DARKGRAY);
+    draw_text(
+        "Move the Player with arrow keys",
+        20.0,
+        20.0,
+        20.0,
+        DARKGRAY,
+    );
     draw_text("Avoid the Red Enemies!", 20.0, 40.0, 20.0, DARKGRAY);
     let wave_text = format!("Wave: {}", gs.wave);
     draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
@@ -156,12 +176,24 @@ async fn main() {
     loop {
         if gs.b_game_over {
             clear_background(BLACK);
-            draw_text("GAME OVER", screen_width() / 2.0 - 80.0, screen_height() / 2.0, 40.0, RED);
-            draw_text("Press Return to Restart", screen_width() / 2.0 - 120.0, screen_height() / 2.0 + 50.0, 20.0, DARKGRAY);
+            draw_text(
+                "GAME OVER",
+                screen_width() / 2.0 - 80.0,
+                screen_height() / 2.0,
+                40.0,
+                RED,
+            );
+            draw_text(
+                "Press Return to Restart",
+                screen_width() / 2.0 - 120.0,
+                screen_height() / 2.0 + 50.0,
+                20.0,
+                DARKGRAY,
+            );
             if is_key_pressed(KeyCode::Enter) {
                 gs = GameState::new();
             }
-            
+
             next_frame().await;
             continue;
         } else if gs.enemies.is_empty() {
@@ -190,7 +222,6 @@ async fn main() {
             n_logic_updates = 0;
         }
 
-
         // render every frame:
         clear_background(BLACK);
         draw(&gs);
@@ -212,10 +243,12 @@ fn spawn_wave(gs: &mut GameState, n_enemies: u32) {
         };
         let y = if x == 0.0 || x == w {
             rand::gen_range(0.0, h)
+        } else if rand::gen_range(0, 2) == 0 {
+            0.0
         } else {
-            if rand::gen_range(0, 2) == 0 { 0.0 } else { h }
+            h
         };
-        let enemy = Enemy::spawn(x, y, 3.0);
+        let enemy = Enemy::spawn(x, y, ENEMY_MAX_SPEED);
         gs.enemies.push(enemy);
     }
 }
@@ -236,9 +269,7 @@ fn init_roto() {
     };
 
     // Step 3: Extract the function
-    let func = pkg
-        .get_function::<(), fn(i32) -> i32>("times_two")
-        .unwrap();
+    let func = pkg.get_function::<(), fn(i32) -> i32>("times_two").unwrap();
 
     // Step 4: Call the function
     let result = func.call(&mut (), 4);
