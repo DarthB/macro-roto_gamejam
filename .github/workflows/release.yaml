@@ -62,12 +62,35 @@ jobs:
           lipo -create -output target/release/${{ env.GAME_EXECUTABLE_NAME }} target/aarch64-apple-darwin/release/${{ env.GAME_EXECUTABLE_NAME }} target/x86_64-apple-darwin/release/${{ env.GAME_EXECUTABLE_NAME }}
       - name: Create release
         run: |
-          mkdir -p build/macos/src/Game.app/Contents/MacOS/assets
+          mkdir -p build/macos/src/Game.app/Contents/MacOS
           cp -r assets build/macos/src/Game.app/Contents/MacOS/
           cp -r credits build/macos/src/Game.app/Contents/MacOS/
           cp -r scripts build/macos/src/Game.app/Contents/MacOS/
           cp target/release/${{ env.GAME_EXECUTABLE_NAME }} build/macos/src/Game.app/Contents/MacOS/
           strip build/macos/src/Game.app/Contents/MacOS/${{ env.GAME_EXECUTABLE_NAME }}
+          
+          # Create Info.plist
+          cat > build/macos/src/Game.app/Contents/Info.plist << EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+              <key>CFBundleExecutable</key>
+              <string>${{ env.GAME_EXECUTABLE_NAME }}</string>
+              <key>CFBundleIdentifier</key>
+              <string>com.yourname.${{ env.GAME_EXECUTABLE_NAME }}</string>
+              <key>CFBundleName</key>
+              <string>${{ env.GAME_OSX_APP_NAME }}</string>
+              <key>CFBundleVersion</key>
+              <string>${{ env.VERSION }}</string>
+              <key>CFBundleShortVersionString</key>
+              <string>${{ env.VERSION }}</string>
+              <key>CFBundlePackageType</key>
+              <string>APPL</string>
+          </dict>
+          </plist>
+          EOF
+          
           mv build/macos/src/Game.app build/macos/src/${{ env.GAME_OSX_APP_NAME }}.app
           ln -s /Applications build/macos/src/
           hdiutil create -fs HFS+ -volname "${{ env.GAME_OSX_APP_NAME }}" -srcfolder build/macos/src ${{ env.GAME_EXECUTABLE_NAME }}.dmg
