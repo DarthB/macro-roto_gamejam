@@ -98,6 +98,7 @@ impl Weapon {
                 projectile_type: ProjectileType::EnergyBall,
                 pos: player_pos,
                 vel,
+                stats: self.stats.projectile_stats,
             });
         } else {
             // Multiple projectiles with spread
@@ -117,6 +118,7 @@ impl Weapon {
                     projectile_type: ProjectileType::EnergyBall,
                     pos: player_pos,
                     vel,
+                    stats: self.stats.projectile_stats,
                 });
             }
         }
@@ -129,17 +131,44 @@ impl Weapon {
             projectile_type: ProjectileType::Pulse,
             pos: player_pos,
             vel: Vec2::ZERO,
+            stats: self.stats.projectile_stats,
         }]
     }
 
     fn fire_homing_missile(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<SpawnCommand> {
         // For now, fire in facing direction. The homing behavior will take over during update
-        let vel = player_facing.normalize() * self.stats.projectile_stats.speed;
-        vec![SpawnCommand::Projectile {
-            projectile_type: ProjectileType::HomingMissile,
-            pos: player_pos,
-            vel,
-        }]
+        if self.stats.projectile_count == 1 {
+            let vel = player_facing.normalize() * self.stats.projectile_stats.speed;
+            vec![SpawnCommand::Projectile {
+                projectile_type: ProjectileType::HomingMissile,
+                pos: player_pos,
+                vel,
+                stats: self.stats.projectile_stats,
+            }]
+        } else {
+            let mut commands = Vec::new();
+            let spread_rad = self.stats.spread_angle.to_radians();
+            let angle_step = if self.stats.projectile_count > 1 {
+                spread_rad * 2.0 / (self.stats.projectile_count - 1) as f32
+            } else {
+                0.0
+            };
+
+            for i in 0..self.stats.projectile_count {
+                let angle_offset = -spread_rad + (i as f32) * angle_step;
+                let direction = self.rotate_vector(player_facing, angle_offset);
+                let vel = direction.normalize() * self.stats.projectile_stats.speed;
+
+                commands.push(SpawnCommand::Projectile {
+                    projectile_type: ProjectileType::HomingMissile,
+                    pos: player_pos,
+                    vel,
+                    stats: self.stats.projectile_stats,
+                });
+            }
+
+            commands
+        }
     }
 
     fn rotate_vector(&self, vec: Vec2, angle_rad: f32) -> Vec2 {
@@ -155,38 +184,66 @@ impl Weapon {
         // Improve weapon stats based on weapon type and level
         match self.weapon_type {
             WeaponType::EnergyBall => {
-                // Every 2 levels, add an additional projectile
-                if self.level.is_multiple_of(2) {
+                if self.level >= 5 {
+                    self.stats.projectile_count += 3;
+                    self.stats.spread_angle = 75.0;
+
+                    // Reduce cooldown by 5% per level (min 0.5s)
+                    self.stats.cooldown = (self.stats.cooldown * 0.85).max(0.1);
+                    // Increase projectile speed by 5%
+                    self.stats.projectile_stats.speed *= 1.25;
+                    // Increase damage by 2
+                    self.stats.projectile_stats.damage += 2.0;
+                } else {
                     self.stats.projectile_count += 1;
                     self.stats.spread_angle = 30.0; // 30 degree spread for multiple projectiles
+
+                    // Reduce cooldown by 5% per level (min 0.5s)
+                    self.stats.cooldown = (self.stats.cooldown * 0.95).max(0.3);
+                    // Increase projectile speed by 5%
+                    self.stats.projectile_stats.speed *= 1.05;
+                    // Increase damage by 2
+                    self.stats.projectile_stats.damage += 2.0;
                 }
-                // Reduce cooldown by 5% per level (min 0.5s)
-                self.stats.cooldown = (self.stats.cooldown * 0.95).max(0.5);
-                // Increase projectile speed by 5%
-                self.stats.projectile_stats.speed *= 1.05;
-                // Increase damage by 2
-                self.stats.projectile_stats.damage += 2.0;
             }
             WeaponType::Pulse => {
-                // Increase pulse size by 15 per level
-                self.stats.projectile_stats.width += 15.0;
-                self.stats.projectile_stats.height += 15.0;
-                // Reduce cooldown by 5% per level (min 1.0s)
-                self.stats.cooldown = (self.stats.cooldown * 0.95).max(1.0);
-                // Increase damage by 3
-                self.stats.projectile_stats.damage += 3.0;
-                // Increase pulse duration slightly
-                self.stats.projectile_stats.time_to_live += 0.05;
+                if self.level >= 5 {
+                    self.stats.projectile_stats.width += 25.0;
+                    self.stats.projectile_stats.height += 25.0;
+                    self.stats.cooldown = (self.stats.cooldown * 0.80).max(0.5);
+                    // Increase damage by 3
+                    self.stats.projectile_stats.damage += 3.0;
+                    // Increase pulse duration slightly
+                    self.stats.projectile_stats.time_to_live += 0.1;
+                } else {
+                    // Increase pulse size by 15 per level
+                    self.stats.projectile_stats.width += 15.0;
+                    self.stats.projectile_stats.height += 15.0;
+                    // Reduce cooldown by 5% per level (min 1.0s)
+                    self.stats.cooldown = (self.stats.cooldown * 0.95).max(1.0);
+                    // Increase damage by 3
+                    self.stats.projectile_stats.damage += 3.0;
+                    // Increase pulse duration slightly
+                    self.stats.projectile_stats.time_to_live += 0.05;
+                }
             }
             WeaponType::HomingMissile => {
-                // Reduce cooldown by 8% per level (min 0.5s)
-                self.stats.cooldown = (self.stats.cooldown * 0.92).max(0.5);
-                // Increase damage by 4
-                self.stats.projectile_stats.damage += 4.0;
-                // Increase homing accuracy (turning rate) by 10%
-                self.stats.projectile_stats.turning_rate *= 1.1;
-                // Increase speed by 5%
-                self.stats.projectile_stats.speed *= 1.05;
+                if self.level >= 5 {
+                    self.stats.projectile_count += 2;
+                    self.stats.spread_angle = 30.0; // 30 degree spread for multiple projectiles
+                    self.stats.cooldown = (self.stats.cooldown * 0.85).max(0.1);
+                    self.stats.projectile_stats.turning_rate *= 1.25;
+                    self.stats.projectile_stats.speed *= 1.35;
+                } else {
+                    // Reduce cooldown by 8% per level (min 0.5s)
+                    self.stats.cooldown = (self.stats.cooldown * 0.92).max(0.4);
+                    // Increase damage by 4
+                    self.stats.projectile_stats.damage += 4.0;
+                    // Increase homing accuracy (turning rate) by 10%
+                    self.stats.projectile_stats.turning_rate *= 1.15;
+                    // Increase speed by 5%
+                    self.stats.projectile_stats.speed *= 1.10;
+                }
             }
         }
     }

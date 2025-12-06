@@ -321,11 +321,16 @@ impl GameState {
         Ok(())
     }
 
-    fn spawn_projectile(&mut self, projectile_type: ProjectileType, pos: Vec2, vel: Vec2) {
+    fn spawn_projectile(
+        &mut self,
+        projectile_type: ProjectileType,
+        pos: Vec2,
+        vel: Vec2,
+        stats: ProjectileStats,
+    ) {
         let id = self.next_entity_id;
         self.next_entity_id += 1;
 
-        let stats = ProjectileStats::from(projectile_type);
         let visual_config = match projectile_type {
             ProjectileType::EnergyBall => self.visual_config.energy_ball,
             ProjectileType::Pulse => self.visual_config.pulse,
@@ -424,8 +429,9 @@ impl GameState {
                     projectile_type,
                     pos,
                     vel,
+                    stats,
                 } => {
-                    self.spawn_projectile(projectile_type, pos, vel);
+                    self.spawn_projectile(projectile_type, pos, vel, stats);
                 }
                 SpawnCommand::Enemy { enemy_type, pos } => {
                     if let Err(err) = self.spawn_enemy(enemy_type, pos) {

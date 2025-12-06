@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::enemy::EnemyType;
-use crate::projectile::ProjectileType;
+use crate::projectile::{ProjectileStats, ProjectileType};
 
 pub type EntityId = u64;
 
@@ -19,6 +19,7 @@ pub enum SpawnCommand {
         projectile_type: ProjectileType,
         pos: Vec2,
         vel: Vec2,
+        stats: ProjectileStats,
     },
     Enemy {
         enemy_type: EnemyType,
