@@ -1,3 +1,0 @@
-fn times_two(x: i32) -> i32 {
-    2 * x
-}

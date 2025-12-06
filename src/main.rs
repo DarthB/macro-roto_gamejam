@@ -3,26 +3,35 @@ use macroquad::prelude::*;
 mod collision;
 mod enemy;
 mod player;
+mod roto_script;
 
 use collision::{Collidable, check_collision};
 use enemy::{Enemy, EnemyType};
 use player::Player;
+use roto_script::{RotoScriptManager, WaveConfig};
 
 const DT: f64 = 1.0 / 30.0;
 
 const OUT_OF_BOUNDS_MARGIN: f32 = 50.0;
 
-struct WaveConfig {
-    basic_enemy_count: u32,
-    chaser_enemy_count: u32,
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum GameStateEnum {
+    Playing,
+    GameOver,
+    ScriptError,
 }
 
 struct GameState {
     player: Player,
     t_frame: f64,
+    t_prev: f64,
+    t_passed: f64,
+    n_logic_updates: u32,
     enemies: Vec<Enemy>,
-    b_game_over: bool,
+    state: GameStateEnum,
     wave: u32,
+    roto_manager: RotoScriptManager,
+    error_message: Option<String>,
 }
 
 impl GameState {
@@ -30,9 +39,14 @@ impl GameState {
         Self {
             player: Player::new(screen_width() / 2.0, screen_height() / 2.0),
             t_frame: 0.0,
+            t_prev: 0.0,
+            t_passed: 0.0,
+            n_logic_updates: 0,
             enemies: vec![],
-            b_game_over: false,
+            state: GameStateEnum::Playing,
             wave: 0,
+            roto_manager: RotoScriptManager::new(),
+            error_message: None,
         }
     }
 
@@ -59,7 +73,7 @@ impl GameState {
 
         // no health system, just game over on first collision
         if !enemies_collided_with_player.is_empty() {
-            self.b_game_over = true;
+            self.state = GameStateEnum::GameOver;
         }
 
         // later remove collided enemies
@@ -130,25 +144,120 @@ impl GameState {
     }
 }
 
-fn get_wave_config(wave_num: u32) -> WaveConfig {
-    match wave_num {
-        0..=2 => WaveConfig {
-            basic_enemy_count: 10 + wave_num * 5,
-            chaser_enemy_count: 0,
-        },
-        3..=5 => WaveConfig {
-            basic_enemy_count: 15,
-            chaser_enemy_count: (wave_num - 2) * 3,
-        },
-        _ => WaveConfig {
-            basic_enemy_count: 10,
-            chaser_enemy_count: 15 + (wave_num - 5) * 2,
-        },
+fn process_state_gameover(gs: &mut GameState) {
+    clear_background(BLACK);
+    draw_text(
+        "GAME OVER",
+        screen_width() / 2.0 - 80.0,
+        screen_height() / 2.0,
+        40.0,
+        RED,
+    );
+    draw_text(
+        "Press Return to Restart",
+        screen_width() / 2.0 - 120.0,
+        screen_height() / 2.0 + 50.0,
+        20.0,
+        DARKGRAY,
+    );
+    if is_key_pressed(KeyCode::Enter) {
+        *gs = GameState::new();
     }
+}
+
+fn process_state_script_error(gs: &mut GameState) {
+    clear_background(BLACK);
+    draw_text(
+        "SCRIPT ERROR",
+        screen_width() / 2.0 - 100.0,
+        screen_height() / 2.0 - 40.0,
+        40.0,
+        RED,
+    );
+    if let Some(ref msg) = gs.error_message {
+        let lines: Vec<&str> = msg.lines().collect();
+        for (i, line) in lines.iter().take(5).enumerate() {
+            draw_text(
+                line,
+                20.0,
+                screen_height() / 2.0 + 20.0 + (i as f32 * 20.0),
+                16.0,
+                DARKGRAY,
+            );
+        }
+    }
+    draw_text(
+        "Fix waves.roto and press 'R' to reload",
+        screen_width() / 2.0 - 150.0,
+        screen_height() / 2.0 + 120.0,
+        20.0,
+        DARKGRAY,
+    );
+    draw_text(
+        "Or press Return to Restart",
+        screen_width() / 2.0 - 120.0,
+        screen_height() / 2.0 + 150.0,
+        20.0,
+        DARKGRAY,
+    );
+    if is_key_pressed(KeyCode::Enter) {
+        *gs = GameState::new();
+    }
+}
+
+fn process_state_playing(gs: &mut GameState) {
+    if gs.enemies.is_empty() {
+        // spawn new wave
+        let wave = gs.wave;
+        match gs.roto_manager.get_wave_config(wave) {
+            Ok(config) => {
+                if let Err(err) = spawn_wave(gs, config) {
+                    gs.state = GameStateEnum::ScriptError;
+                    gs.error_message = Some(err);
+                } else {
+                    gs.wave += 1;
+                }
+            }
+            Err(err) => {
+                gs.state = GameStateEnum::ScriptError;
+                gs.error_message = Some(err);
+            }
+        }
+    }
+
+    // update time counters
+    gs.t_frame = get_time();
+    gs.t_passed += gs.t_frame - gs.t_prev;
+
+    // update logic at fixed time steps
+    while gs.t_passed >= DT {
+        input(gs);
+        update(gs);
+        gs.t_passed -= DT;
+        gs.n_logic_updates += 1;
+    }
+
+    if gs.n_logic_updates > 0 {
+        if gs.n_logic_updates > 1 {
+            println!("logic updates: {} - LOW FRAME RATE", gs.n_logic_updates);
+        }
+        gs.n_logic_updates = 0;
+    }
+
+    // render every frame:
+    clear_background(BLACK);
+    draw(gs);
+
+    gs.t_prev = gs.t_frame;
 }
 
 fn input(gs: &mut GameState) {
     gs.player.input();
+
+    // Hot reload Roto scripts on 'R' key
+    if is_key_pressed(KeyCode::R) {
+        gs.roto_manager.reload();
+    }
 }
 
 fn update(gs: &mut GameState) {
@@ -177,95 +286,52 @@ fn draw(gs: &GameState) {
         DARKGRAY,
     );
     draw_text("Avoid the Red Enemies!", 20.0, 40.0, 20.0, DARKGRAY);
+    draw_text("Press 'R' to reload scripts", 20.0, 60.0, 20.0, DARKGRAY);
     let wave_text = format!("Wave: {}", gs.wave);
     draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
 }
 
 #[macroquad::main("Auto Scriptable by Roto")]
 async fn main() {
-    init_roto();
-
     let mut gs = GameState::new();
-    let mut t_prev = get_time();
-    let mut t_passed: f64 = 0.0;
-    let mut n_logic_updates: u32 = 0;
 
     loop {
-        if gs.b_game_over {
-            clear_background(BLACK);
-            draw_text(
-                "GAME OVER",
-                screen_width() / 2.0 - 80.0,
-                screen_height() / 2.0,
-                40.0,
-                RED,
-            );
-            draw_text(
-                "Press Return to Restart",
-                screen_width() / 2.0 - 120.0,
-                screen_height() / 2.0 + 50.0,
-                20.0,
-                DARKGRAY,
-            );
-            if is_key_pressed(KeyCode::Enter) {
-                gs = GameState::new();
+        match gs.state {
+            GameStateEnum::GameOver => {
+                process_state_gameover(&mut gs);
             }
-
-            next_frame().await;
-            continue;
-        } else if gs.enemies.is_empty() {
-            // spawn new wave
-            let wave = gs.wave;
-            let config = get_wave_config(wave);
-            spawn_wave(&mut gs, config);
-            gs.wave += 1;
-        }
-
-        // update time counters
-        gs.t_frame = get_time();
-        t_passed += gs.t_frame - t_prev;
-
-        // update logic at fixed time steps
-        while t_passed >= DT {
-            input(&mut gs);
-            update(&mut gs);
-            t_passed -= DT;
-            n_logic_updates += 1;
-        }
-
-        if n_logic_updates > 0 {
-            if n_logic_updates > 1 {
-                println!("logic updates: {} - LOW FRAME RATE", n_logic_updates);
+            GameStateEnum::ScriptError => {
+                process_state_script_error(&mut gs);
             }
-            n_logic_updates = 0;
+            GameStateEnum::Playing => {
+                process_state_playing(&mut gs);
+            }
         }
-
-        // render every frame:
-        clear_background(BLACK);
-        draw(&gs);
-
-        t_prev = gs.t_frame;
         next_frame().await
     }
 }
 
-fn spawn_wave(gs: &mut GameState, config: WaveConfig) {
+fn spawn_wave(gs: &mut GameState, config: WaveConfig) -> Result<(), String> {
     let w = screen_width();
     let h = screen_height();
 
     // Spawn basic enemies
     for _ in 0..config.basic_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let enemy = Enemy::spawn(x, y, EnemyType::Basic);
+        let stats = gs.roto_manager.get_enemy_stats(EnemyType::Basic)?;
+        let enemy = Enemy::spawn(x, y, EnemyType::Basic, stats);
         gs.enemies.push(enemy);
     }
 
     // Spawn chaser enemies
     for _ in 0..config.chaser_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let enemy = Enemy::spawn(x, y, EnemyType::Chaser);
+        let stats = gs.roto_manager.get_enemy_stats(EnemyType::Chaser)?;
+        let enemy = Enemy::spawn(x, y, EnemyType::Chaser, stats);
         gs.enemies.push(enemy);
     }
+
+    Ok(())
 }
 
 fn get_spawn_position(w: f32, h: f32) -> (f32, f32) {
@@ -283,27 +349,4 @@ fn get_spawn_position(w: f32, h: f32) -> (f32, f32) {
         h
     };
     (x, y)
-}
-
-use roto::Runtime;
-
-fn init_roto() {
-    // Step 1: Create a runtime
-    let rt = Runtime::new();
-
-    // Step 2: Compile the script and check for type errors
-    let result = rt.compile("script.roto");
-    let mut pkg = match result {
-        Ok(pkg) => pkg,
-        Err(err) => {
-            panic!("{err}");
-        }
-    };
-
-    // Step 3: Extract the function
-    let func = pkg.get_function::<(), fn(i32) -> i32>("times_two").unwrap();
-
-    // Step 4: Call the function
-    let result = func.call(&mut (), 4);
-    println!("times_two(4) = {result}");
 }

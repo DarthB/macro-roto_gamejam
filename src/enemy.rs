@@ -10,37 +10,22 @@ pub enum EnemyType {
     Chaser,
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct EnemyStats {
     pub radius: f32,
     pub max_speed: f32,
     pub acceleration: f32,
 }
 
-pub fn get_enemy_stats(enemy_type: EnemyType) -> EnemyStats {
-    match enemy_type {
-        EnemyType::Basic => EnemyStats {
-            radius: 15.0,
-            max_speed: 3.0,
-            acceleration: 0.15,
-        },
-        EnemyType::Chaser => EnemyStats {
-            radius: 12.0,
-            max_speed: 4.5,
-            acceleration: 0.25,
-        },
-    }
-}
-
 pub struct Enemy {
     pub pos: Vec2,
     pub vel: Vec2,
     pub enemy_type: EnemyType,
+    stats: EnemyStats,
 }
 
 impl Enemy {
-    pub fn spawn(x: f32, y: f32, enemy_type: EnemyType) -> Self {
-        let stats = get_enemy_stats(enemy_type);
-
+    pub fn spawn(x: f32, y: f32, enemy_type: EnemyType, stats: EnemyStats) -> Self {
         // random velocity to target on a circle in the center of the screen:
         let tx = screen_width() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
         let ty = screen_height() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
@@ -55,16 +40,16 @@ impl Enemy {
             pos: spawn_pos,
             vel,
             enemy_type,
+            stats,
         }
     }
 
     pub fn draw(&self) {
-        let stats = get_enemy_stats(self.enemy_type);
         let color = match self.enemy_type {
             EnemyType::Basic => RED,
             EnemyType::Chaser => ORANGE,
         };
-        draw_circle(self.pos.x, self.pos.y, stats.radius, color);
+        draw_circle(self.pos.x, self.pos.y, self.stats.radius, color);
     }
 
     pub fn update(&mut self, player_pos: Option<Vec2>) {
@@ -83,32 +68,28 @@ impl Enemy {
     }
 
     fn update_basic(&mut self) {
-        let stats = get_enemy_stats(self.enemy_type);
-
         // add acceleration in current direction
         let acc_dir = Vec2::new(
             if self.vel.x < 0.0 { -1.0 } else { 1.0 },
             if self.vel.y < 0.0 { -1.0 } else { 1.0 },
         );
-        self.vel += acc_dir * stats.acceleration;
+        self.vel += acc_dir * self.stats.acceleration;
 
         // clamp velocity to max speed
         self.clamp_velocity();
     }
 
     fn update_chaser(&mut self, player_pos: Vec2) {
-        let stats = get_enemy_stats(self.enemy_type);
-
         // Calculate direction to player
         let to_player = player_pos - self.pos;
         let distance = to_player.length();
 
         if distance > 1.0 {
             let desired_dir = to_player / distance;
-            let desired_vel = desired_dir * stats.max_speed;
+            let desired_vel = desired_dir * self.stats.max_speed;
 
             // Steering: gradually adjust velocity toward desired velocity
-            let steering = (desired_vel - self.vel) * stats.acceleration;
+            let steering = (desired_vel - self.vel) * self.stats.acceleration;
             self.vel += steering;
         }
 
@@ -117,19 +98,17 @@ impl Enemy {
     }
 
     fn clamp_velocity(&mut self) {
-        let stats = get_enemy_stats(self.enemy_type);
         let speed = self.vel.length();
-        if speed > stats.max_speed {
-            self.vel = self.vel.normalize() * stats.max_speed;
+        if speed > self.stats.max_speed {
+            self.vel = self.vel.normalize() * self.stats.max_speed;
         }
     }
 }
 
 impl Collidable for Enemy {
     fn collider(&self) -> Collider {
-        let stats = get_enemy_stats(self.enemy_type);
         Collider::Circle {
-            radius: stats.radius,
+            radius: self.stats.radius,
         }
     }
 
