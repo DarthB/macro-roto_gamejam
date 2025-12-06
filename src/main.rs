@@ -27,6 +27,17 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
+    #[cfg(target_os = "macos")]
+    {
+        use std::env;
+        if let Ok(exe_path) = env::current_exe()
+            && let Some(exe_dir) = exe_path.parent()
+        {
+            let resources_dir = exe_dir.join("../Resources");
+            let _ = env::set_current_dir(&resources_dir);
+        }
+    }
+
     let mut gs = GameState::new();
 
     loop {
