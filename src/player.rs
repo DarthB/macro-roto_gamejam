@@ -13,6 +13,8 @@ pub struct Player {
     stats: EntityStats,
     weapons: Vec<Weapon>,
     visual_config: PlayerVisualConfig,
+    pub xp: u32,
+    pub level: u32,
 }
 
 impl Player {
@@ -25,12 +27,70 @@ impl Player {
             stats,
             weapons: vec![],
             visual_config: PlayerVisualConfig::default(),
+            xp: 0,
+            level: 0,
         }
+    }
+
+    pub fn reset(&mut self, x: f32, y: f32) {
+        self.pos = Vec2::new(x, y);
+        self.vel = Vec2::ZERO;
+        self.facing = Vec2::new(1.0, 0.0);
+        self.weapons.clear();
+        self.xp = 0;
+        self.level = 0;
+    }
+
+    pub fn xp_for_level(level: u32) -> u32 {
+        // XP thresholds: 5, 15, 30, 50, 75, 105, 140, 180, 225, 275
+        // Each level requires 5 more XP than the previous increment
+        if level == 0 {
+            0
+        } else {
+            let mut total = 0;
+            for i in 1..=level {
+                total += 5 * i;
+            }
+            total
+        }
+    }
+
+    pub fn xp_for_next_level(&self) -> u32 {
+        Self::xp_for_level(self.level + 1)
+    }
+
+    pub fn add_xp(&mut self, xp: u32) -> bool {
+        self.xp += xp;
+
+        // Check if we leveled up
+        if self.xp >= self.xp_for_next_level() {
+            self.level += 1;
+            return true; // Level up occurred
+        }
+        false
+    }
+
+    pub fn get_level(&self) -> u32 {
+        self.level
+    }
+
+    pub fn get_xp(&self) -> u32 {
+        self.xp
     }
 
     pub fn add_weapon(&mut self, weapon_type: WeaponType) {
         let weapon = Weapon::new(weapon_type);
         self.weapons.push(weapon);
+    }
+
+    pub fn level_up_weapon(&mut self, index: usize) {
+        if index < self.weapons.len() {
+            self.weapons[index].level_up();
+        }
+    }
+
+    pub fn get_weapons_mut(&mut self) -> &mut Vec<Weapon> {
+        &mut self.weapons
     }
 
     pub fn override_stats(&mut self, stats: EntityStats) {

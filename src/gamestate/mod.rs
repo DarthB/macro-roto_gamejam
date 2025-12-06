@@ -437,6 +437,18 @@ impl GameState {
     }
 
     pub fn process_despawns(&mut self) {
+        // Award XP for each enemy killed
+        let enemies_killed = self.enemies_to_despawn.len() as u32;
+        if enemies_killed > 0 {
+            // Award 1 XP per enemy killed
+            let leveled_up = self.player.add_xp(enemies_killed);
+
+            // If player leveled up, transition to weapon selection
+            if leveled_up {
+                self.set_next_state(GameStateEnum::WeaponSelection);
+            }
+        }
+
         self.enemies
             .retain(|e| !self.enemies_to_despawn.contains(&e.id));
         self.projectiles
@@ -477,7 +489,10 @@ impl GameState {
                     self.t_prev = get_time();
                 }
                 GameStateEnum::GameOver => {
-                    // Entering game over - nothing to initialize
+                    // Entering game over - reset player for next game
+                    let w = screen_width();
+                    let h = screen_height();
+                    self.player.reset(w / 2.0, h / 2.0);
                 }
                 GameStateEnum::ScriptError => {
                     // Entering script error - nothing to initialize

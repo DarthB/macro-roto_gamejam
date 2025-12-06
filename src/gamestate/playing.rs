@@ -100,10 +100,28 @@ pub fn draw(gs: &GameState) {
     let wave_text = format!("Wave: {}", gs.wave);
     draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
 
+    // Show player level and XP
+    let level_text = format!("Level: {}", gs.player.get_level());
+    draw_text(&level_text, screen_width() - 120.0, 40.0, 20.0, DARKGRAY);
+
+    let xp_text = format!(
+        "XP: {}/{}",
+        gs.player.get_xp(),
+        gs.player.xp_for_next_level()
+    );
+    draw_text(&xp_text, screen_width() - 120.0, 60.0, 16.0, DARKGRAY);
+
     // Show current weapon info
-    if let Some(weapon) = gs.player.get_weapons().first() {
-        let weapon_text = format!("Weapon: {:?} Lvl{}", weapon.weapon_type, weapon.get_level());
-        draw_text(&weapon_text, screen_width() - 200.0, 40.0, 16.0, DARKGRAY);
+    let weapons = gs.player.get_weapons();
+    for (i, weapon) in weapons.iter().enumerate() {
+        let weapon_text = format!("{:?} Lvl{}", weapon.weapon_type, weapon.get_level());
+        draw_text(
+            &weapon_text,
+            screen_width() - 200.0,
+            80.0 + (i as f32 * 20.0),
+            16.0,
+            DARKGRAY,
+        );
     }
 
     if gs.paused {

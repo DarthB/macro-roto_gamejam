@@ -148,11 +148,47 @@ impl Weapon {
         Vec2::new(vec.x * cos_a - vec.y * sin_a, vec.x * sin_a + vec.y * cos_a)
     }
 
-    // Future methods for level progression
+    // Level up the weapon, improving its stats
     pub fn level_up(&mut self) {
         self.level += 1;
-        // TODO: Update stats based on new level
-        // This will be implemented later with Roto integration
+
+        // Improve weapon stats based on weapon type and level
+        match self.weapon_type {
+            WeaponType::EnergyBall => {
+                // Every 2 levels, add an additional projectile
+                if self.level.is_multiple_of(2) {
+                    self.stats.projectile_count += 1;
+                    self.stats.spread_angle = 30.0; // 30 degree spread for multiple projectiles
+                }
+                // Reduce cooldown by 5% per level (min 0.5s)
+                self.stats.cooldown = (self.stats.cooldown * 0.95).max(0.5);
+                // Increase projectile speed by 5%
+                self.stats.projectile_stats.speed *= 1.05;
+                // Increase damage by 2
+                self.stats.projectile_stats.damage += 2.0;
+            }
+            WeaponType::Pulse => {
+                // Increase pulse size by 15 per level
+                self.stats.projectile_stats.width += 15.0;
+                self.stats.projectile_stats.height += 15.0;
+                // Reduce cooldown by 5% per level (min 1.0s)
+                self.stats.cooldown = (self.stats.cooldown * 0.95).max(1.0);
+                // Increase damage by 3
+                self.stats.projectile_stats.damage += 3.0;
+                // Increase pulse duration slightly
+                self.stats.projectile_stats.time_to_live += 0.05;
+            }
+            WeaponType::HomingMissile => {
+                // Reduce cooldown by 8% per level (min 0.5s)
+                self.stats.cooldown = (self.stats.cooldown * 0.92).max(0.5);
+                // Increase damage by 4
+                self.stats.projectile_stats.damage += 4.0;
+                // Increase homing accuracy (turning rate) by 10%
+                self.stats.projectile_stats.turning_rate *= 1.1;
+                // Increase speed by 5%
+                self.stats.projectile_stats.speed *= 1.05;
+            }
+        }
     }
 
     pub fn get_level(&self) -> u32 {
