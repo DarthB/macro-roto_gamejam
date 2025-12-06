@@ -59,6 +59,20 @@ impl Enemy {
             EnemyType::Chaser => ORANGE,
         };
         draw_circle(self.pos.x, self.pos.y, self.stats.radius, color);
+
+        // Draw white direction indicator triangle
+        if self.vel.length() > 0.1 {
+            let dir = self.vel.normalize();
+            let tip = self.pos + dir * (self.stats.radius + 5.0);
+            let base_offset = dir * self.stats.radius;
+            let perpendicular = Vec2::new(-dir.y, dir.x) * 3.0;
+
+            let p1 = tip;
+            let p2 = self.pos + base_offset + perpendicular;
+            let p3 = self.pos + base_offset - perpendicular;
+
+            draw_triangle(p1, p2, p3, WHITE);
+        }
     }
 
     pub fn update(&mut self, player_pos: Option<Vec2>) {
