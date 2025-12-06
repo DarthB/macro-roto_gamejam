@@ -57,9 +57,11 @@ impl Player {
         );
 
         // Draw direction indicator triangle
+        let mouse_pos = mouse_position();
+        let to_mouse = Vec2::new(mouse_pos.0, mouse_pos.1) - self.pos;
         draw_direction_indicator(
             self.pos,
-            self.vel,
+            to_mouse,
             self.stats.radius,
             self.visual_config.indicator_color,
             self.visual_config.indicator_size,
@@ -84,9 +86,11 @@ impl Player {
 
         self.vel += acceleration;
 
-        // Update facing direction based on movement
-        if acceleration.length() > 0.0 {
-            self.facing = acceleration.normalize();
+        // Update facing direction based on mouse cursor position
+        let mouse_pos = mouse_position();
+        let to_mouse = Vec2::new(mouse_pos.0, mouse_pos.1) - self.pos;
+        if to_mouse.length() > 1.0 {
+            self.facing = to_mouse.normalize();
         }
 
         // Clamp velocity to max speed with proper normalization

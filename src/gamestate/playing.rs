@@ -82,7 +82,7 @@ pub fn draw(gs: &GameState) {
         projectile.draw();
     }
     draw_text(
-        "Auto-battler: Move with arrow keys, weapon fire automatically",
+        "Auto-battler: Move with Arrow Keys, aim with mouse, weapon fires automatically",
         20.0,
         20.0,
         20.0,
