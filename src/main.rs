@@ -2,6 +2,8 @@ use macroquad::prelude::*;
 
 #[macroquad::main("MyGame")]
 async fn main() {
+    init_roto();
+
     loop {
         clear_background(RED);
 
@@ -14,3 +16,27 @@ async fn main() {
     }
 }
 
+use roto::Runtime;
+
+fn init_roto() {
+    // Step 1: Create a runtime
+    let rt = Runtime::new();
+
+    // Step 2: Compile the script and check for type errors
+    let result = rt.compile("script.roto");
+    let mut pkg = match result {
+        Ok(pkg) => pkg,
+        Err(err) => {
+            panic!("{err}");
+        }
+    };
+
+    // Step 3: Extract the function
+    let func = pkg
+        .get_function::<(), fn(i32) -> i32>("times_two")
+        .unwrap();
+
+    // Step 4: Call the function
+    let result = func.call(&mut (), 4);
+    println!("times_two(4) = {result}");
+}
