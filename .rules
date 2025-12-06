@@ -1,3 +1,59 @@
 We join the Rust and C++ Dragons Game Jam with the theme "Elve on a Shelf".
 
-Beside making a fun auto battler, which is not very creative. We want to learn macroquad and the embedded rust-like scripting language root.
+Beside making a fun auto battler, which is not very creative. We want to learn macroquad and the embedded rust-like scripting language roto.
+
+## Architecture
+
+This is a 2D auto-battler game built with:
+- **macroquad**: Game framework for rendering, input, and game loop
+- **Roto**: JIT-compiled scripting language for game content (enemy stats, wave composition)
+
+The architecture separates:
+- **Game Logic** (Rust): Physics, collision, AI, rendering, core systems
+- **Game Content** (Roto): Enemy stats, wave progression, balance numbers
+- **Hot-Reload**: Press 'R' during gameplay to reload Roto scripts without restarting
+
+## Project Structure
+
+```
+src/
+├── main.rs          - Game loop, state machine (Playing/GameOver/ScriptError), main entry point
+├── player.rs        - Player entity with movement, velocity, and input handling
+├── enemy.rs         - Enemy entity with types (Basic/Chaser) and AI behaviors
+├── collision.rs     - Collision detection system with Collider enum (Circle/Rect), CollisionData
+├── roto_script.rs   - Roto integration: RotoScriptManager, WaveConfig, script loading/reloading
+└── waves.roto       - Roto script defining enemy stats and wave composition (hot-reloadable)
+```
+
+### Key Components
+
+- **GameStateEnum**: Playing, GameOver, ScriptError
+- **Collision System**: Trait-based (Collidable), supports Circle-Circle, Circle-Rect, Rect-Rect
+- **Enemy Types**: Basic (random movement), Chaser (follows player with steering)
+- **Vec2 Usage**: All entities use macroquad's Vec2 for position and velocity
+- **Custom Roto Types**: EnemyStats and WaveComposition registered with Roto runtime
+
+## Development Guidelines
+
+### Code Changes
+- **Keep updates small**: Change only what's necessary for the task
+- **Think before implementing**: Consider impact on existing code, prefer minimal LOC changes
+- **Don't change too much at once**: Make incremental improvements, test frequently
+- **Avoid over-engineering**: Simple solutions are better than complex abstractions
+
+### When Refactoring
+1. Check if existing types can be reused before creating new ones
+2. Prefer adding derives (Clone, Copy, Debug) over creating duplicate types
+3. Use Result<T, E> for error handling instead of fallback logic
+4. Extract functions when main loop or methods exceed ~50 lines
+
+### Testing
+- Always run `cargo build`, `cargo clippy`, and `cargo test` after changes
+- Test hot-reload by breaking waves.roto and pressing 'R' in-game
+- Verify all three game states work correctly
+
+### Roto Integration
+- Roto does NOT support `//` comments or `pub` keyword
+- Only primitive types (u32, i64, f32) can be returned directly
+- Custom types must be wrapped in Val<T> and registered via library! macro
+- Compile script for each function call (Roto design pattern)
