@@ -5,12 +5,17 @@ mod enemy;
 mod player;
 
 use collision::{Collidable, check_collision};
-use enemy::{DEFAULT_ENEMY_MAX_SPEED, Enemy};
+use enemy::{Enemy, EnemyType};
 use player::Player;
 
 const DT: f64 = 1.0 / 30.0;
 
 const OUT_OF_BOUNDS_MARGIN: f32 = 50.0;
+
+struct WaveConfig {
+    basic_enemy_count: u32,
+    chaser_enemy_count: u32,
+}
 
 struct GameState {
     player: Player,
@@ -125,14 +130,32 @@ impl GameState {
     }
 }
 
+fn get_wave_config(wave_num: u32) -> WaveConfig {
+    match wave_num {
+        0..=2 => WaveConfig {
+            basic_enemy_count: 10 + wave_num * 5,
+            chaser_enemy_count: 0,
+        },
+        3..=5 => WaveConfig {
+            basic_enemy_count: 15,
+            chaser_enemy_count: (wave_num - 2) * 3,
+        },
+        _ => WaveConfig {
+            basic_enemy_count: 10,
+            chaser_enemy_count: 15 + (wave_num - 5) * 2,
+        },
+    }
+}
+
 fn input(gs: &mut GameState) {
     gs.player.input();
 }
 
 fn update(gs: &mut GameState) {
     gs.player.update();
+    let player_pos = gs.player.pos;
     for enemy in gs.enemies.iter_mut() {
-        enemy.update();
+        enemy.update(Some(player_pos));
     }
 
     // this may trigger game over
@@ -193,7 +216,8 @@ async fn main() {
         } else if gs.enemies.is_empty() {
             // spawn new wave
             let wave = gs.wave;
-            spawn_wave(&mut gs, 10 + wave * 5);
+            let config = get_wave_config(wave);
+            spawn_wave(&mut gs, config);
             gs.wave += 1;
         }
 
@@ -225,26 +249,40 @@ async fn main() {
     }
 }
 
-fn spawn_wave(gs: &mut GameState, n_enemies: u32) {
+fn spawn_wave(gs: &mut GameState, config: WaveConfig) {
     let w = screen_width();
     let h = screen_height();
-    for _ in 0..n_enemies {
-        let x = if rand::gen_range(0, 2) == 0 {
-            // left or right edge
-            if rand::gen_range(0, 2) == 0 { 0.0 } else { w }
-        } else {
-            rand::gen_range(0.0, w)
-        };
-        let y = if x == 0.0 || x == w {
-            rand::gen_range(0.0, h)
-        } else if rand::gen_range(0, 2) == 0 {
-            0.0
-        } else {
-            h
-        };
-        let enemy = Enemy::spawn(x, y, DEFAULT_ENEMY_MAX_SPEED);
+
+    // Spawn basic enemies
+    for _ in 0..config.basic_enemy_count {
+        let (x, y) = get_spawn_position(w, h);
+        let enemy = Enemy::spawn(x, y, EnemyType::Basic);
         gs.enemies.push(enemy);
     }
+
+    // Spawn chaser enemies
+    for _ in 0..config.chaser_enemy_count {
+        let (x, y) = get_spawn_position(w, h);
+        let enemy = Enemy::spawn(x, y, EnemyType::Chaser);
+        gs.enemies.push(enemy);
+    }
+}
+
+fn get_spawn_position(w: f32, h: f32) -> (f32, f32) {
+    let x = if rand::gen_range(0, 2) == 0 {
+        // left or right edge
+        if rand::gen_range(0, 2) == 0 { 0.0 } else { w }
+    } else {
+        rand::gen_range(0.0, w)
+    };
+    let y = if x == 0.0 || x == w {
+        rand::gen_range(0.0, h)
+    } else if rand::gen_range(0, 2) == 0 {
+        0.0
+    } else {
+        h
+    };
+    (x, y)
 }
 
 use roto::Runtime;
