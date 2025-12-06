@@ -1,8 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
-use crate::enemy::EntityStats;
-use crate::projectile::Projectile;
+use crate::entity::{EntityStats, SpawnCommand};
 use crate::visual_config::{PlayerVisualConfig, draw_direction_indicator};
 use crate::weapon::{Weapon, WeaponType};
 
@@ -94,34 +93,22 @@ impl Player {
         self.clamp_velocity();
     }
 
-    pub fn update(
-        &mut self,
-        dt: f32,
-        visual_config: &crate::visual_config::GameVisualConfig,
-    ) -> Vec<Projectile> {
+    pub fn update(&mut self, dt: f32) -> Vec<SpawnCommand> {
         self.pos += self.vel;
 
         // Apply friction
         self.vel *= self.stats.friction;
 
-        // Update weapons and collect projectiles to spawn
-        let mut new_projectiles = Vec::new();
+        // Update weapons and collect spawn commands
+        let mut spawn_commands = Vec::new();
 
         for weapon in &mut self.weapons {
             weapon.update(dt);
-
-            // Get appropriate visual config based on weapon type
-            let projectile_visual_config = match weapon.weapon_type {
-                WeaponType::EnergyBall => visual_config.energy_ball,
-                WeaponType::Pulse => visual_config.pulse,
-                WeaponType::HomingMissile => visual_config.homing_missile,
-            };
-
-            let projectiles = weapon.fire(self.pos, self.facing, projectile_visual_config);
-            new_projectiles.extend(projectiles);
+            let commands = weapon.fire(self.pos, self.facing);
+            spawn_commands.extend(commands);
         }
 
-        new_projectiles
+        spawn_commands
     }
 
     fn clamp_velocity(&mut self) {

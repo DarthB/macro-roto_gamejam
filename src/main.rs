@@ -2,314 +2,19 @@ use macroquad::prelude::*;
 
 mod collision;
 mod enemy;
+mod entity;
+mod gamestate;
 mod player;
 mod projectile;
 mod roto_script;
 mod visual_config;
 mod weapon;
 
-use collision::{Collidable, check_collision};
-use enemy::{Enemy, EnemyType};
-use player::Player;
-use projectile::Projectile;
-use roto_script::{RotoScriptManager, WaveConfig};
-use visual_config::GameVisualConfig;
+use enemy::EnemyType;
+use gamestate::{GameState, GameStateEnum};
+use roto_script::WaveConfig;
 
-const DT: f64 = 1.0 / 30.0;
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-enum GameStateEnum {
-    Playing,
-    GameOver,
-    ScriptError,
-}
-
-struct GameState {
-    player: Player,
-    t_frame: f64,
-    t_prev: f64,
-    t_passed: f64,
-    n_logic_updates: u32,
-    enemies: Vec<Enemy>,
-    projectiles: Vec<Projectile>,
-    state: GameStateEnum,
-    wave: u32,
-    roto_manager: RotoScriptManager,
-    error_message: Option<String>,
-    paused: bool,
-    visual_config: GameVisualConfig,
-}
-
-impl GameState {
-    pub fn new() -> Self {
-        let mut roto_manager = RotoScriptManager::new();
-
-        // Try to fetch player stats from Roto, fallback to defaults if it fails
-        let player_stats = roto_manager
-            .get_player_stats()
-            .unwrap_or(enemy::EntityStats {
-                radius: 20.0,
-                max_speed: 5.0,
-                acceleration: 1.0,
-                friction: 0.9,
-            });
-
-        let visual_config = roto_manager
-            .get_visual_config()
-            .unwrap_or(GameVisualConfig::default());
-
-        let mut player = Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats);
-        player.override_visual_config(visual_config.player);
-
-        Self {
-            player,
-            t_frame: get_time(),
-            t_prev: get_time(),
-            t_passed: 0.0,
-            n_logic_updates: 0,
-            enemies: vec![],
-            projectiles: vec![],
-            state: GameStateEnum::Playing,
-            wave: 0,
-            roto_manager,
-            error_message: None,
-            paused: false,
-            visual_config,
-        }
-    }
-
-    fn check_collisions(&mut self) {
-        // Check player-enemy collisions
-        let enemies_collided_with_player: Vec<usize> = self
-            .enemies
-            .iter()
-            .enumerate()
-            .filter_map(|(i, enemy)| {
-                let collision_data = check_collision(
-                    &self.player.collider(),
-                    self.player.position(),
-                    &enemy.collider(),
-                    enemy.position(),
-                );
-                if collision_data.collided {
-                    Some(i)
-                } else {
-                    None
-                }
-            })
-            .collect();
-
-        // no health system, just game over on first collision
-        if !enemies_collided_with_player.is_empty() {
-            self.state = GameStateEnum::GameOver;
-        }
-
-        // later remove collided enemies
-        for &i in enemies_collided_with_player.iter().rev() {
-            self.despawn_enemy(i);
-        }
-
-        // Check projectile-enemy collisions
-        self.check_projectile_enemy_collisions();
-
-        // Check enemy-enemy collisions with elastic bounce
-        self.check_enemy_collisions();
-    }
-
-    fn check_enemy_collisions(&mut self) {
-        let num_enemies = self.enemies.len();
-
-        for i in 0..num_enemies {
-            for j in (i + 1)..num_enemies {
-                let (pos1, vel1, pos2, vel2) = {
-                    let enemy1 = &self.enemies[i];
-                    let enemy2 = &self.enemies[j];
-                    (enemy1.pos, enemy1.vel, enemy2.pos, enemy2.vel)
-                };
-
-                let collision_data = check_collision(
-                    &self.enemies[i].collider(),
-                    pos1,
-                    &self.enemies[j].collider(),
-                    pos2,
-                );
-
-                if collision_data.collided {
-                    // Elastic collision response (equal mass)
-                    // Normal points from enemy2 to enemy1
-                    let normal = collision_data.normal;
-
-                    // Calculate relative velocity
-                    let rel_vel = vel1 - vel2;
-
-                    // Calculate relative velocity along collision normal
-                    let vel_along_normal = rel_vel.dot(normal);
-
-                    // Do not resolve if velocities are separating
-                    if vel_along_normal < 0.0 {
-                        // For elastic collision with equal mass, exchange normal components
-                        let impulse = normal * vel_along_normal;
-
-                        // Apply impulse to both enemies
-                        self.enemies[i].vel -= impulse;
-                        self.enemies[j].vel += impulse;
-                    }
-                }
-            }
-        }
-    }
-
-    fn check_projectile_enemy_collisions(&mut self) {
-        let mut enemies_to_remove = Vec::new();
-        let mut projectiles_to_remove = Vec::new();
-
-        for (proj_idx, projectile) in self.projectiles.iter().enumerate() {
-            for (enemy_idx, enemy) in self.enemies.iter().enumerate() {
-                let collision_data = check_collision(
-                    &projectile.collider(),
-                    projectile.position(),
-                    &enemy.collider(),
-                    enemy.position(),
-                );
-
-                if collision_data.collided {
-                    enemies_to_remove.push(enemy_idx);
-                    // Energy balls get removed on hit, pulses stay
-                    match projectile.projectile_type {
-                        projectile::ProjectileType::EnergyBall
-                        | projectile::ProjectileType::HomingMissile => {
-                            projectiles_to_remove.push(proj_idx);
-                        }
-                        projectile::ProjectileType::Pulse => {
-                            // Pulse continues to exist and can hit multiple enemies
-                        }
-                    }
-                }
-            }
-        }
-
-        // Remove duplicates and sort in reverse order for safe removal
-        enemies_to_remove.sort_unstable();
-        enemies_to_remove.dedup();
-        projectiles_to_remove.sort_unstable();
-        projectiles_to_remove.dedup();
-
-        // Remove enemies (in reverse order)
-        for &idx in enemies_to_remove.iter().rev() {
-            self.despawn_enemy(idx);
-        }
-
-        // Remove projectiles (in reverse order)
-        for &idx in projectiles_to_remove.iter().rev() {
-            self.projectiles.remove(idx);
-        }
-    }
-
-    fn despawn_enemy(&mut self, index: usize) {
-        self.enemies.remove(index);
-    }
-
-    fn check_player_bounds(&mut self) {
-        let w = screen_width();
-        let h = screen_height();
-
-        if self.player.pos.x < 0.0
-            || self.player.pos.x > w
-            || self.player.pos.y < 0.0
-            || self.player.pos.y > h
-        {
-            self.state = GameStateEnum::GameOver;
-        }
-    }
-
-    fn is_in_bounds(pos: Vec2, margin: f32) -> bool {
-        let w = screen_width();
-        let h = screen_height();
-        pos.x >= -margin && pos.x <= w + margin && pos.y >= -margin && pos.y <= h + margin
-    }
-
-    fn despawn_enemies_out_of_bounds(&mut self) {
-        let margin = self
-            .roto_manager
-            .get_game_constants()
-            .map(|c| c.out_of_bounds_margin)
-            .unwrap_or(50.0);
-
-        self.enemies
-            .retain(|enemy| Self::is_in_bounds(enemy.pos, margin));
-    }
-
-    fn update_time_for_logic(&mut self) -> u32 {
-        // update time counters
-        self.t_frame = get_time();
-        self.t_passed += self.t_frame - self.t_prev;
-
-        // update logic at fixed time steps
-        while self.t_passed >= DT {
-            self.t_passed -= DT;
-            self.n_logic_updates += 1;
-        }
-
-        let reval = self.n_logic_updates;
-        if self.n_logic_updates > 0 {
-            if self.n_logic_updates > 1 {
-                println!("logic updates: {} - LOW FRAME RATE", self.n_logic_updates);
-            }
-            self.n_logic_updates = 0;
-        }
-
-        self.t_prev = self.t_frame;
-        reval
-    }
-
-    fn reload_roto_scripts(&mut self) {
-        match self.reload_roto_script_internal() {
-            Ok(_) => {
-                self.state = GameStateEnum::Playing;
-                self.error_message = None;
-            }
-            Err(err) => {
-                self.state = GameStateEnum::ScriptError;
-                self.error_message = Some(err);
-            }
-        }
-    }
-
-    fn reload_roto_script_internal(&mut self) -> Result<(), String> {
-        self.roto_manager.reload();
-
-        self.player
-            .override_stats(self.roto_manager.get_player_stats()?);
-
-        for enemy in self.enemies.iter_mut() {
-            let stats = match enemy.enemy_type {
-                EnemyType::Basic => self.roto_manager.get_enemy_stats(EnemyType::Basic)?,
-                EnemyType::Chaser => self.roto_manager.get_enemy_stats(EnemyType::Chaser)?,
-            };
-            enemy.override_stats(stats);
-        }
-
-        // Reload visual configuration
-        self.visual_config = self.roto_manager.get_visual_config()?;
-
-        // Override visual configs for existing entities
-        self.player
-            .override_visual_config(self.visual_config.player);
-
-        for enemy in self.enemies.iter_mut() {
-            let visual_config = match enemy.enemy_type {
-                EnemyType::Basic => self.visual_config.basic_enemy,
-                EnemyType::Chaser => self.visual_config.chaser_enemy,
-            };
-            enemy.override_visual_config(visual_config);
-        }
-
-        // Note: Projectiles get visual config when created, so existing ones keep their colors
-        // This is actually desired behavior - projectiles in flight maintain their appearance
-
-        Ok(())
-    }
-}
+pub const DT: f64 = 1.0 / 30.0;
 
 fn process_state_gameover(gs: &mut GameState) {
     clear_background(BLACK);
@@ -422,9 +127,9 @@ fn global_input(gs: &mut GameState) {
 fn update(gs: &mut GameState) {
     let dt = DT as f32;
 
-    // Update player and get new projectiles from weapon firing
-    let new_projectiles = gs.player.update(dt, &gs.visual_config);
-    gs.projectiles.extend(new_projectiles);
+    // Update player and get spawn commands from weapon firing
+    let spawn_commands = gs.player.update(dt);
+    gs.execute_spawn_commands(spawn_commands);
 
     let player_pos = gs.player.pos;
     for enemy in gs.enemies.iter_mut() {
@@ -438,38 +143,23 @@ fn update(gs: &mut GameState) {
         projectile.update_homing(dt, &gs.enemies);
     }
 
-    // Remove expired projectiles
-    gs.projectiles.retain(|projectile| !projectile.is_expired());
+    // Mark expired projectiles for despawn
+    for projectile in &gs.projectiles {
+        if projectile.is_expired() {
+            gs.projectiles_to_despawn.insert(projectile.id);
+        }
+    }
 
-    // Remove out-of-bounds projectiles
+    // Mark out-of-bounds entities for despawn
     gs.despawn_projectiles_out_of_bounds();
+    gs.despawn_enemies_out_of_bounds();
 
     // this may trigger game over
     gs.check_collisions();
     gs.check_player_bounds();
 
-    gs.despawn_enemies_out_of_bounds();
-}
-
-impl GameState {
-    fn despawn_projectiles_out_of_bounds(&mut self) {
-        let margin = self
-            .roto_manager
-            .get_game_constants()
-            .map(|c| c.out_of_bounds_margin)
-            .unwrap_or(50.0);
-
-        self.projectiles.retain(|projectile| {
-            // Only remove energy balls and homing missiles that go out of bounds, keep pulses
-            match projectile.projectile_type {
-                projectile::ProjectileType::EnergyBall
-                | projectile::ProjectileType::HomingMissile => {
-                    Self::is_in_bounds(projectile.pos, margin)
-                }
-                projectile::ProjectileType::Pulse => true, // Pulses stay centered on player
-            }
-        });
-    }
+    // Process all despawns at the end
+    gs.process_despawns();
 }
 
 fn draw(gs: &GameState) {
@@ -556,36 +246,16 @@ fn spawn_wave(gs: &mut GameState, config: WaveConfig) -> Result<(), String> {
     let w = screen_width();
     let h = screen_height();
 
-    let constants = gs.roto_manager.get_game_constants()?;
-    let basic_stats = gs.roto_manager.get_enemy_stats(EnemyType::Basic)?;
-    let chaser_stats = gs.roto_manager.get_enemy_stats(EnemyType::Chaser)?;
-
     // Spawn basic enemies
     for _ in 0..config.basic_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let mut enemy = Enemy::spawn(
-            x,
-            y,
-            EnemyType::Basic,
-            basic_stats,
-            constants.spawn_target_offset,
-        );
-        enemy.override_visual_config(gs.visual_config.basic_enemy);
-        gs.enemies.push(enemy);
+        gs.spawn_enemy(EnemyType::Basic, Vec2::new(x, y))?;
     }
 
     // Spawn chaser enemies
     for _ in 0..config.chaser_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let mut enemy = Enemy::spawn(
-            x,
-            y,
-            EnemyType::Chaser,
-            chaser_stats,
-            constants.spawn_target_offset,
-        );
-        enemy.override_visual_config(gs.visual_config.chaser_enemy);
-        gs.enemies.push(enemy);
+        gs.spawn_enemy(EnemyType::Chaser, Vec2::new(x, y))?;
     }
 
     Ok(())

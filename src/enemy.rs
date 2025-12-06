@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
+use crate::entity::{EntityId, EntityStats};
 use crate::visual_config::{EnemyVisualConfig, draw_direction_indicator};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -9,54 +10,16 @@ pub enum EnemyType {
     Chaser,
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct EntityStats {
-    pub radius: f32,
-    pub max_speed: f32,
-    pub acceleration: f32,
-    pub friction: f32,
-}
-
 pub struct Enemy {
+    pub id: EntityId,
     pub pos: Vec2,
     pub vel: Vec2,
     pub enemy_type: EnemyType,
-    stats: EntityStats,
-    visual_config: EnemyVisualConfig,
+    pub stats: EntityStats,
+    pub visual_config: EnemyVisualConfig,
 }
 
 impl Enemy {
-    pub fn spawn(
-        x: f32,
-        y: f32,
-        enemy_type: EnemyType,
-        stats: EntityStats,
-        spawn_target_offset: f32,
-    ) -> Self {
-        // random velocity to target on a circle in the center of the screen:
-        let tx = screen_width() / 2.0 + rand::gen_range(-spawn_target_offset, spawn_target_offset);
-        let ty = screen_height() / 2.0 + rand::gen_range(-spawn_target_offset, spawn_target_offset);
-
-        let target = Vec2::new(tx, ty);
-        let spawn_pos = Vec2::new(x, y);
-        let dir = (target - spawn_pos).normalize();
-        let speed = rand::gen_range(1.0, stats.max_speed);
-        let vel = dir * speed;
-
-        let visual_config = match enemy_type {
-            EnemyType::Basic => EnemyVisualConfig::basic_default(),
-            EnemyType::Chaser => EnemyVisualConfig::chaser_default(),
-        };
-
-        Self {
-            pos: spawn_pos,
-            vel,
-            enemy_type,
-            stats,
-            visual_config,
-        }
-    }
-
     pub fn override_stats(&mut self, stats: EntityStats) {
         self.stats = stats;
     }

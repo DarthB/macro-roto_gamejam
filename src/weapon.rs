@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
-use crate::projectile::{Projectile, ProjectileStats, ProjectileType};
-use crate::visual_config::ProjectileVisualConfig;
+use crate::entity::SpawnCommand;
+use crate::projectile::{ProjectileStats, ProjectileType};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WeaponType {
@@ -73,12 +73,7 @@ impl Weapon {
         self.cooldown_remaining <= 0.0
     }
 
-    pub fn fire(
-        &mut self,
-        player_pos: Vec2,
-        player_facing: Vec2,
-        visual_config: ProjectileVisualConfig,
-    ) -> Vec<Projectile> {
+    pub fn fire(&mut self, player_pos: Vec2, player_facing: Vec2) -> Vec<SpawnCommand> {
         if !self.can_fire() {
             return Vec::new();
         }
@@ -87,33 +82,23 @@ impl Weapon {
         self.cooldown_remaining = self.stats.cooldown;
 
         match self.weapon_type {
-            WeaponType::EnergyBall => {
-                self.fire_energy_ball(player_pos, player_facing, visual_config)
-            }
-            WeaponType::Pulse => self.fire_pulse(player_pos, visual_config),
-            WeaponType::HomingMissile => {
-                self.fire_homing_missile(player_pos, player_facing, visual_config)
-            }
+            WeaponType::EnergyBall => self.fire_energy_ball(player_pos, player_facing),
+            WeaponType::Pulse => self.fire_pulse(player_pos),
+            WeaponType::HomingMissile => self.fire_homing_missile(player_pos, player_facing),
         }
     }
 
-    fn fire_energy_ball(
-        &self,
-        player_pos: Vec2,
-        player_facing: Vec2,
-        visual_config: ProjectileVisualConfig,
-    ) -> Vec<Projectile> {
-        let mut projectiles = Vec::new();
+    fn fire_energy_ball(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<SpawnCommand> {
+        let mut commands = Vec::new();
 
         if self.stats.projectile_count == 1 {
             // Single projectile in facing direction
-            let projectile = Projectile::spawn_energy_ball(
-                player_pos,
-                player_facing,
-                self.stats.projectile_stats,
-                visual_config,
-            );
-            projectiles.push(projectile);
+            let vel = player_facing.normalize() * self.stats.projectile_stats.speed;
+            commands.push(SpawnCommand::Projectile {
+                projectile_type: ProjectileType::EnergyBall,
+                pos: player_pos,
+                vel,
+            });
         } else {
             // Multiple projectiles with spread
             let spread_rad = self.stats.spread_angle.to_radians();
@@ -126,44 +111,35 @@ impl Weapon {
             for i in 0..self.stats.projectile_count {
                 let angle_offset = -spread_rad + (i as f32) * angle_step;
                 let direction = self.rotate_vector(player_facing, angle_offset);
+                let vel = direction.normalize() * self.stats.projectile_stats.speed;
 
-                let projectile = Projectile::spawn_energy_ball(
-                    player_pos,
-                    direction,
-                    self.stats.projectile_stats,
-                    visual_config,
-                );
-                projectiles.push(projectile);
+                commands.push(SpawnCommand::Projectile {
+                    projectile_type: ProjectileType::EnergyBall,
+                    pos: player_pos,
+                    vel,
+                });
             }
         }
 
-        projectiles
+        commands
     }
 
-    fn fire_pulse(
-        &self,
-        player_pos: Vec2,
-        visual_config: ProjectileVisualConfig,
-    ) -> Vec<Projectile> {
-        let projectile =
-            Projectile::spawn_pulse(player_pos, self.stats.projectile_stats, visual_config);
-        vec![projectile]
+    fn fire_pulse(&self, player_pos: Vec2) -> Vec<SpawnCommand> {
+        vec![SpawnCommand::Projectile {
+            projectile_type: ProjectileType::Pulse,
+            pos: player_pos,
+            vel: Vec2::ZERO,
+        }]
     }
 
-    fn fire_homing_missile(
-        &self,
-        player_pos: Vec2,
-        player_facing: Vec2,
-        visual_config: ProjectileVisualConfig,
-    ) -> Vec<Projectile> {
+    fn fire_homing_missile(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<SpawnCommand> {
         // For now, fire in facing direction. The homing behavior will take over during update
-        let projectile = Projectile::spawn_homing_missile(
-            player_pos,
-            player_facing,
-            self.stats.projectile_stats,
-            visual_config,
-        );
-        vec![projectile]
+        let vel = player_facing.normalize() * self.stats.projectile_stats.speed;
+        vec![SpawnCommand::Projectile {
+            projectile_type: ProjectileType::HomingMissile,
+            pos: player_pos,
+            vel,
+        }]
     }
 
     fn rotate_vector(&self, vec: Vec2, angle_rad: f32) -> Vec2 {

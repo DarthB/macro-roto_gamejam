@@ -1,6 +1,7 @@
 use roto::{Runtime, Val, library};
 
-use crate::enemy::{self, EnemyType};
+use crate::enemy::EnemyType;
+use crate::entity::EntityStats;
 use crate::visual_config::{
     BlendConfig, ColorConfig, EnemyVisualConfig, GameVisualConfig, PlayerVisualConfig,
     ProjectileVisualConfig,
@@ -25,7 +26,7 @@ pub struct RotoScriptManager {
 impl RotoScriptManager {
     fn create_runtime() -> Runtime {
         let lib = library! {
-            #[copy] type EntityStats = Val<enemy::EntityStats>;
+            #[copy] type EntityStats = Val<EntityStats>;
             #[copy] type WaveComposition = Val<WaveConfig>;
             #[copy] type GameConstants = Val<GameConstants>;
             #[copy] type ColorConfig = Val<ColorConfig>;
@@ -35,9 +36,9 @@ impl RotoScriptManager {
             #[copy] type BlendConfig = Val<BlendConfig>;
             #[copy] type GameVisualConfig = Val<GameVisualConfig>;
 
-            impl Val<enemy::EntityStats> {
-                fn new(radius: f32, max_speed: f32, acceleration: f32, friction: f32) -> Val<enemy::EntityStats> {
-                    Val(enemy::EntityStats { radius, max_speed, acceleration, friction })
+            impl Val<EntityStats> {
+                fn new(radius: f32, max_speed: f32, acceleration: f32, friction: f32) -> Val<EntityStats> {
+                    Val(EntityStats { radius, max_speed, acceleration, friction })
                 }
             }
 
@@ -162,7 +163,7 @@ impl RotoScriptManager {
         })
     }
 
-    pub fn get_enemy_stats(&mut self, enemy_type: EnemyType) -> Result<enemy::EntityStats, String> {
+    pub fn get_enemy_stats(&mut self, enemy_type: EnemyType) -> Result<EntityStats, String> {
         let func_name = match enemy_type {
             EnemyType::Basic => "get_basic_enemy_stats",
             EnemyType::Chaser => "get_chaser_enemy_stats",
@@ -170,16 +171,16 @@ impl RotoScriptManager {
 
         self.call_roto_function(func_name, |pkg| {
             let func = pkg
-                .get_function::<(), fn() -> Val<enemy::EntityStats>>(func_name)
+                .get_function::<(), fn() -> Val<EntityStats>>(func_name)
                 .map_err(|_| format!("ERROR: {} function not found", func_name))?;
             Ok(func.call(&mut ()).0)
         })
     }
 
-    pub fn get_player_stats(&mut self) -> Result<enemy::EntityStats, String> {
+    pub fn get_player_stats(&mut self) -> Result<EntityStats, String> {
         self.call_roto_function("get_player_stats", |pkg| {
             let func = pkg
-                .get_function::<(), fn() -> Val<enemy::EntityStats>>("get_player_stats")
+                .get_function::<(), fn() -> Val<EntityStats>>("get_player_stats")
                 .map_err(|_| "ERROR: get_player_stats function not found".to_string())?;
             Ok(func.call(&mut ()).0)
         })

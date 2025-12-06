@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
+use crate::entity::EntityId;
 use crate::visual_config::{ProjectileVisualConfig, draw_direction_indicator};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -56,6 +57,7 @@ impl From<ProjectileType> for ProjectileStats {
 }
 
 pub struct Projectile {
+    pub id: EntityId,
     pub pos: Vec2,
     pub vel: Vec2,
     pub projectile_type: ProjectileType,
@@ -66,58 +68,6 @@ pub struct Projectile {
 }
 
 impl Projectile {
-    pub fn spawn_energy_ball(
-        pos: Vec2,
-        direction: Vec2,
-        stats: ProjectileStats,
-        visual_config: ProjectileVisualConfig,
-    ) -> Self {
-        let vel = direction.normalize() * stats.speed;
-        Self {
-            pos,
-            vel,
-            projectile_type: ProjectileType::EnergyBall,
-            stats,
-            time_remaining: stats.time_to_live,
-            source_pos: pos,
-            visual_config,
-        }
-    }
-
-    pub fn spawn_pulse(
-        pos: Vec2,
-        stats: ProjectileStats,
-        visual_config: ProjectileVisualConfig,
-    ) -> Self {
-        Self {
-            pos,
-            vel: Vec2::ZERO,
-            projectile_type: ProjectileType::Pulse,
-            stats,
-            time_remaining: stats.time_to_live,
-            source_pos: pos,
-            visual_config,
-        }
-    }
-
-    pub fn spawn_homing_missile(
-        pos: Vec2,
-        direction: Vec2,
-        stats: ProjectileStats,
-        visual_config: ProjectileVisualConfig,
-    ) -> Self {
-        let vel = direction.normalize() * stats.speed;
-        Self {
-            pos,
-            vel,
-            projectile_type: ProjectileType::HomingMissile,
-            stats,
-            time_remaining: stats.time_to_live,
-            source_pos: pos,
-            visual_config,
-        }
-    }
-
     pub fn update(&mut self, dt: f32) {
         self.time_remaining -= dt;
 
