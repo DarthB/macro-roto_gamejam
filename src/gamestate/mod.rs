@@ -1,3 +1,7 @@
+pub mod gameover;
+pub mod playing;
+pub mod script_error;
+
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
@@ -246,6 +250,18 @@ impl GameState {
 
         self.t_prev = self.t_frame;
         reval
+    }
+
+    pub fn process_global_input(&mut self) {
+        // Hot reload Roto scripts on 'R' key
+        if is_key_pressed(KeyCode::R) {
+            self.reload_roto_scripts();
+        }
+
+        // Toggle pause on 'P' key
+        if is_key_pressed(KeyCode::P) {
+            self.paused = !self.paused;
+        }
     }
 
     pub fn reload_roto_scripts(&mut self) {
