@@ -12,8 +12,6 @@ use roto_script::{RotoScriptManager, WaveConfig};
 
 const DT: f64 = 1.0 / 30.0;
 
-const OUT_OF_BOUNDS_MARGIN: f32 = 50.0;
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum GameStateEnum {
     Playing,
@@ -36,8 +34,20 @@ struct GameState {
 
 impl GameState {
     pub fn new() -> Self {
+        let mut roto_manager = RotoScriptManager::new();
+
+        // Try to fetch player stats from Roto, fallback to defaults if it fails
+        let player_stats = roto_manager
+            .get_player_stats()
+            .unwrap_or(enemy::EntityStats {
+                radius: 20.0,
+                max_speed: 5.0,
+                acceleration: 1.0,
+                friction: 0.9,
+            });
+
         Self {
-            player: Player::new(screen_width() / 2.0, screen_height() / 2.0),
+            player: Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats),
             t_frame: 0.0,
             t_prev: 0.0,
             t_passed: 0.0,
@@ -45,7 +55,7 @@ impl GameState {
             enemies: vec![],
             state: GameStateEnum::Playing,
             wave: 0,
-            roto_manager: RotoScriptManager::new(),
+            roto_manager,
             error_message: None,
         }
     }
@@ -133,13 +143,19 @@ impl GameState {
     }
 
     fn despawn_enemies_out_of_bounds(&mut self) {
+        let margin = self
+            .roto_manager
+            .get_game_constants()
+            .map(|c| c.out_of_bounds_margin)
+            .unwrap_or(50.0);
+
         let w = screen_width();
         let h = screen_height();
         self.enemies.retain(|enemy| {
-            enemy.pos.x >= -OUT_OF_BOUNDS_MARGIN
-                && enemy.pos.x <= w + OUT_OF_BOUNDS_MARGIN
-                && enemy.pos.y >= -OUT_OF_BOUNDS_MARGIN
-                && enemy.pos.y <= h + OUT_OF_BOUNDS_MARGIN
+            enemy.pos.x >= -margin
+                && enemy.pos.x <= w + margin
+                && enemy.pos.y >= -margin
+                && enemy.pos.y <= h + margin
         });
     }
 }
@@ -257,6 +273,7 @@ fn input(gs: &mut GameState) {
     // Hot reload Roto scripts on 'R' key
     if is_key_pressed(KeyCode::R) {
         gs.roto_manager.reload();
+        println!("Manual Reload Triggered");
     }
 }
 
@@ -315,19 +332,33 @@ fn spawn_wave(gs: &mut GameState, config: WaveConfig) -> Result<(), String> {
     let w = screen_width();
     let h = screen_height();
 
+    let constants = gs.roto_manager.get_game_constants()?;
+    let basic_stats = gs.roto_manager.get_enemy_stats(EnemyType::Basic)?;
+    let chaser_stats = gs.roto_manager.get_enemy_stats(EnemyType::Chaser)?;
+
     // Spawn basic enemies
     for _ in 0..config.basic_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let stats = gs.roto_manager.get_enemy_stats(EnemyType::Basic)?;
-        let enemy = Enemy::spawn(x, y, EnemyType::Basic, stats);
+        let enemy = Enemy::spawn(
+            x,
+            y,
+            EnemyType::Basic,
+            basic_stats,
+            constants.spawn_target_offset,
+        );
         gs.enemies.push(enemy);
     }
 
     // Spawn chaser enemies
     for _ in 0..config.chaser_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let stats = gs.roto_manager.get_enemy_stats(EnemyType::Chaser)?;
-        let enemy = Enemy::spawn(x, y, EnemyType::Chaser, stats);
+        let enemy = Enemy::spawn(
+            x,
+            y,
+            EnemyType::Chaser,
+            chaser_stats,
+            constants.spawn_target_offset,
+        );
         gs.enemies.push(enemy);
     }
 

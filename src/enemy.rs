@@ -2,8 +2,6 @@ use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
 
-const SPAWN_TARGET_OFFSET: f32 = 50.0;
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EnemyType {
     Basic,
@@ -11,24 +9,31 @@ pub enum EnemyType {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct EnemyStats {
+pub struct EntityStats {
     pub radius: f32,
     pub max_speed: f32,
     pub acceleration: f32,
+    pub friction: f32,
 }
 
 pub struct Enemy {
     pub pos: Vec2,
     pub vel: Vec2,
     pub enemy_type: EnemyType,
-    stats: EnemyStats,
+    stats: EntityStats,
 }
 
 impl Enemy {
-    pub fn spawn(x: f32, y: f32, enemy_type: EnemyType, stats: EnemyStats) -> Self {
+    pub fn spawn(
+        x: f32,
+        y: f32,
+        enemy_type: EnemyType,
+        stats: EntityStats,
+        spawn_target_offset: f32,
+    ) -> Self {
         // random velocity to target on a circle in the center of the screen:
-        let tx = screen_width() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
-        let ty = screen_height() / 2.0 + rand::gen_range(-SPAWN_TARGET_OFFSET, SPAWN_TARGET_OFFSET);
+        let tx = screen_width() / 2.0 + rand::gen_range(-spawn_target_offset, spawn_target_offset);
+        let ty = screen_height() / 2.0 + rand::gen_range(-spawn_target_offset, spawn_target_offset);
 
         let target = Vec2::new(tx, ty);
         let spawn_pos = Vec2::new(x, y);

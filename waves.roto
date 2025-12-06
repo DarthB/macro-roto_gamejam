@@ -1,9 +1,17 @@
-fn get_basic_enemy_stats() -> EnemyStats {
-    EnemyStats.new(15.0, 3.0, 0.15)
+fn get_player_stats() -> EntityStats {
+    EntityStats.new(20.0, 5.0, 1.0, 0.9)
 }
 
-fn get_chaser_enemy_stats() -> EnemyStats {
-    EnemyStats.new(12.0, 4.5, 0.25)
+fn get_basic_enemy_stats() -> EntityStats {
+    EntityStats.new(15.0, 3.0, 0.15, 0.0)
+}
+
+fn get_chaser_enemy_stats() -> EntityStats {
+    EntityStats.new(12.0, 4.5, 0.25, 0.0)
+}
+
+fn get_game_constants() -> GameConstants {
+    GameConstants.new(50.0, 50.0)
 }
 
 fn get_wave_composition(wave_number: u32) -> WaveComposition {
