@@ -1,9 +1,9 @@
 <Wix xmlns="http://wixtoolset.org/schemas/v4/wxs" xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
     <!-- ToDo use your own keys for Name and Manufacturer, as well as a new UUID for UpgradeCode -->
     <Package
-        Name="Disastris"
-        Manufacturer="Gam-Jam Disators"
-        UpgradeCode="c4387dca-ad4d-41eb-8b59-974558a22151"
+        Name="Macro Roto - The Auto Battler"
+        Manufacturer="Cpp and Rust Dragons"
+        UpgradeCode="28146941-cfd3-4949-90d9-0b2663a5d009"
         Version="0.1.0"
 
         Scope="perUserOrMachine">
@@ -35,7 +35,7 @@
         <!-- Installs the actual files -->
         <ComponentGroup Id="MainComponent" Directory="INSTALLFOLDER">
             <Component>
-                <File Id="Executable" Source="..\..\..\target\release\disastris.exe" Vital="true" />  <!-- ToDo this should point to your executable -->
+                <File Id="Executable" Source="..\..\..\target\release\auto_roto.exe" Vital="true" />  <!-- ToDo this should point to your executable -->
             </Component>
         </ComponentGroup>
 
