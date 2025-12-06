@@ -521,7 +521,18 @@ fn draw(gs: &GameState) {
     }
 }
 
-#[macroquad::main("Auto Scriptable by Roto")]
+fn window_conf() -> Conf {
+    Conf {
+        window_width: 800,
+        window_height: 800,
+        window_resizable: false,
+        fullscreen: false,
+        window_title: "Auto Scriptable by Roto".to_owned(),
+        ..Default::default() // Use other defaults
+    }
+}
+
+#[macroquad::main(window_conf)]
 async fn main() {
     let mut gs = GameState::new();
 
