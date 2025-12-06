@@ -32,6 +32,7 @@ impl GameState {
     }
 
     fn check_collisions(&mut self) {
+        // Check player-enemy collisions
         let enemies_collided_with_player: Vec<usize> = self
             .enemies
             .iter()
@@ -59,6 +60,52 @@ impl GameState {
         // later remove collided enemies
         for &i in enemies_collided_with_player.iter().rev() {
             self.despawn_enemy(i);
+        }
+
+        // Check enemy-enemy collisions with elastic bounce
+        self.check_enemy_collisions();
+    }
+
+    fn check_enemy_collisions(&mut self) {
+        let num_enemies = self.enemies.len();
+
+        for i in 0..num_enemies {
+            for j in (i + 1)..num_enemies {
+                let (pos1, vel1, pos2, vel2) = {
+                    let enemy1 = &self.enemies[i];
+                    let enemy2 = &self.enemies[j];
+                    (enemy1.pos, enemy1.vel, enemy2.pos, enemy2.vel)
+                };
+
+                let collision_data = check_collision(
+                    &self.enemies[i].collider(),
+                    pos1,
+                    &self.enemies[j].collider(),
+                    pos2,
+                );
+
+                if collision_data.collided {
+                    // Elastic collision response (equal mass)
+                    // Normal points from enemy2 to enemy1
+                    let normal = collision_data.normal;
+
+                    // Calculate relative velocity
+                    let rel_vel = vel1 - vel2;
+
+                    // Calculate relative velocity along collision normal
+                    let vel_along_normal = rel_vel.dot(normal);
+
+                    // Do not resolve if velocities are separating
+                    if vel_along_normal < 0.0 {
+                        // For elastic collision with equal mass, exchange normal components
+                        let impulse = normal * vel_along_normal;
+
+                        // Apply impulse to both enemies
+                        self.enemies[i].vel -= impulse;
+                        self.enemies[j].vel += impulse;
+                    }
+                }
+            }
         }
     }
 
