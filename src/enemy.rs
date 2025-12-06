@@ -49,6 +49,10 @@ impl Enemy {
         }
     }
 
+    pub fn override_stats(&mut self, stats: EntityStats) {
+        self.stats = stats;
+    }
+
     pub fn draw(&self) {
         let color = match self.enemy_type {
             EnemyType::Basic => RED,

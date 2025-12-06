@@ -30,6 +30,7 @@ struct GameState {
     wave: u32,
     roto_manager: RotoScriptManager,
     error_message: Option<String>,
+    paused: bool,
 }
 
 impl GameState {
@@ -48,8 +49,8 @@ impl GameState {
 
         Self {
             player: Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats),
-            t_frame: 0.0,
-            t_prev: 0.0,
+            t_frame: get_time(),
+            t_prev: get_time(),
             t_passed: 0.0,
             n_logic_updates: 0,
             enemies: vec![],
@@ -57,6 +58,7 @@ impl GameState {
             wave: 0,
             roto_manager,
             error_message: None,
+            paused: false,
         }
     }
 
@@ -158,6 +160,64 @@ impl GameState {
                 && enemy.pos.y <= h + margin
         });
     }
+
+    fn update_time_for_logic(&mut self) -> u32 {
+        // update time counters
+        self.t_frame = get_time();
+        self.t_passed += self.t_frame - self.t_prev;
+
+        // update logic at fixed time steps
+        while self.t_passed >= DT {
+            self.t_passed -= DT;
+            self.n_logic_updates += 1;
+        }
+
+        let reval = self.n_logic_updates;
+        if self.n_logic_updates > 0 {
+            if self.n_logic_updates > 1 {
+                println!("logic updates: {} - LOW FRAME RATE", self.n_logic_updates);
+            }
+            self.n_logic_updates = 0;
+        }
+
+        self.t_prev = self.t_frame;
+        reval
+    }
+
+    fn reload_roto_scripts(&mut self) {
+        match self.reload_roto_script_internal() {
+            Ok(_) => {
+                self.state = GameStateEnum::Playing;
+                self.error_message = None;
+            }
+            Err(err) => {
+                self.state = GameStateEnum::ScriptError;
+                self.error_message = Some(err);
+            }
+        }
+    }
+
+    fn reload_roto_script_internal(&mut self) -> Result<(), String> {
+        self.roto_manager.reload();
+
+        self.player.override_stats(
+            self.roto_manager
+                .get_player_stats()?,
+        );
+
+        for enemy in self.enemies.iter_mut() {
+            let stats = match enemy.enemy_type {
+                EnemyType::Basic => self
+                    .roto_manager
+                    .get_enemy_stats(EnemyType::Basic)?,
+                EnemyType::Chaser => self
+                    .roto_manager
+                    .get_enemy_stats(EnemyType::Chaser)?,
+            };
+            enemy.override_stats(stats);
+        }
+        Ok(())
+    }
 }
 
 fn process_state_gameover(gs: &mut GameState) {
@@ -221,7 +281,8 @@ fn process_state_script_error(gs: &mut GameState) {
     }
 }
 
-fn process_state_playing(gs: &mut GameState) {
+fn update_state_playing(gs: &mut GameState) {
+    // check if we need to spawn a new wave:
     if gs.enemies.is_empty() {
         // spawn new wave
         let wave = gs.wave;
@@ -241,39 +302,29 @@ fn process_state_playing(gs: &mut GameState) {
         }
     }
 
-    // update time counters
-    gs.t_frame = get_time();
-    gs.t_passed += gs.t_frame - gs.t_prev;
-
-    // update logic at fixed time steps
-    while gs.t_passed >= DT {
-        input(gs);
-        update(gs);
-        gs.t_passed -= DT;
-        gs.n_logic_updates += 1;
-    }
-
-    if gs.n_logic_updates > 0 {
-        if gs.n_logic_updates > 1 {
-            println!("logic updates: {} - LOW FRAME RATE", gs.n_logic_updates);
+    // perform the logic updates if any
+    let num_updates = gs.update_time_for_logic();
+    for _ in 0..num_updates {
+        if !gs.paused {
+            input(gs);
+            update(gs);
         }
-        gs.n_logic_updates = 0;
     }
-
-    // render every frame:
-    clear_background(BLACK);
-    draw(gs);
-
-    gs.t_prev = gs.t_frame;
 }
 
 fn input(gs: &mut GameState) {
     gs.player.input();
+}
 
+fn global_input(gs: &mut GameState) {
     // Hot reload Roto scripts on 'R' key
     if is_key_pressed(KeyCode::R) {
-        gs.roto_manager.reload();
-        println!("Manual Reload Triggered");
+        gs.reload_roto_scripts();
+    }
+
+    // Toggle pause on 'P' key
+    if is_key_pressed(KeyCode::P) {
+        gs.paused = !gs.paused;
     }
 }
 
@@ -304,8 +355,19 @@ fn draw(gs: &GameState) {
     );
     draw_text("Avoid the Red Enemies!", 20.0, 40.0, 20.0, DARKGRAY);
     draw_text("Press 'R' to reload scripts", 20.0, 60.0, 20.0, DARKGRAY);
+    draw_text("Press 'P' to pause", 20.0, 80.0, 20.0, DARKGRAY);
     let wave_text = format!("Wave: {}", gs.wave);
     draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
+
+    if gs.paused {
+        draw_text(
+            "PAUSED",
+            screen_width() / 2.0 - 50.0,
+            screen_height() / 2.0,
+            40.0,
+            YELLOW,
+        );
+    }
 }
 
 #[macroquad::main("Auto Scriptable by Roto")]
@@ -321,9 +383,14 @@ async fn main() {
                 process_state_script_error(&mut gs);
             }
             GameStateEnum::Playing => {
-                process_state_playing(&mut gs);
+                global_input(&mut gs);
+                update_state_playing(&mut gs);
+                // render every frame for Playing state:
+                clear_background(BLACK);
+                draw(&gs);
             }
         }
+
         next_frame().await
     }
 }

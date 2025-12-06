@@ -19,6 +19,10 @@ impl Player {
         }
     }
 
+    pub fn override_stats(&mut self, stats: EntityStats) {
+        self.stats = stats;
+    }
+
     pub fn draw(&self) {
         draw_circle(self.pos.x, self.pos.y, self.stats.radius, YELLOW);
     }

@@ -1,5 +1,5 @@
 fn get_player_stats() -> EntityStats {
-    EntityStats.new(20.0, 5.0, 1.0, 0.9)
+    EntityStats.new(20.0, 7.5, 1.0, 0.9)
 }
 
 fn get_basic_enemy_stats() -> EntityStats {
