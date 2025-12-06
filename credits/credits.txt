@@ -1,0 +1,86 @@
+================================================================================
+                    MACRO-ROTO - THE AUTO BATTLER
+================================================================================
+
+                    Rust and C++ Dragons Game Jam
+                         Theme: "Elf on a Shelf"
+
+================================================================================
+                              GAME CREDITS
+================================================================================
+
+DEVELOPED BY:
+    DarthB
+
+GAME JAM:
+    Rust and C++ Dragons Game Jam
+
+GAME CONCEPT:
+    A 2D auto-battler where you survive waves of enemies by strategically
+    selecting and upgrading weapons. Not the most creative interpretation
+    of "Elf on a Shelf", but we had fun learning new tech!
+
+================================================================================
+                           TECHNOLOGY STACK
+================================================================================
+
+GAME FRAMEWORK:
+    macroquad - Rust game framework for 2D games
+    https://github.com/not-fl3/macroquad
+
+SCRIPTING LANGUAGE:
+    Roto - Embedded Rust-like scripting language with JIT compilation
+    https://github.com/rune-rs/roto
+
+PROGRAMMING LANGUAGE:
+    Rust - Systems programming language focused on safety and performance
+
+================================================================================
+                              GAME FEATURES
+================================================================================
+
+- 30 Waves of increasing difficulty
+- 3 Unique weapons: Energy Ball, Pulse, Homing Missile
+- Level-up system with XP progression
+- Hot-reloadable game content via Roto scripts
+- Dynamic weapon upgrades and combinations
+
+================================================================================
+                            SPECIAL THANKS
+================================================================================
+
+- The macroquad community for an excellent 2D game framework
+- The Roto developers for the embedded scripting language
+- Rust and C++ Dragons Game Jam organizers
+- The Rust community for amazing tools and support
+
+================================================================================
+                             PROJECT GOALS
+================================================================================
+
+Primary Objectives:
+    ✓ Learn macroquad game framework
+    ✓ Explore Roto embedded scripting language
+    ✓ Build a complete game loop with progression
+    ✓ Implement hot-reload for rapid iteration
+
+Secondary Objectives:
+    ✓ Practice data-driven game design
+    ✓ Separate game logic (Rust) from game content (Roto)
+    ✓ Have fun making games!
+
+================================================================================
+                              LICENSE
+================================================================================
+
+This project was created for educational purposes and game jam participation.
+
+Game Framework: macroquad (MIT/Apache-2.0)
+Scripting: Roto (BSD-3-Clause License)
+
+================================================================================
+
+                    Thanks for playing our game jam entry!
+                          Press 'R' to reload magic ✨
+
+================================================================================
