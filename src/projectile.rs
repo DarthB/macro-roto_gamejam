@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
-use crate::visual_config::ProjectileVisualConfig;
+use crate::visual_config::{ProjectileVisualConfig, draw_direction_indicator};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ProjectileType {
@@ -227,18 +227,13 @@ impl Projectile {
                 );
 
                 // Draw direction indicator (small triangle pointing in velocity direction)
-                if self.vel.length() > 0.0 {
-                    let dir = self.vel.normalize();
-                    let tip = self.pos + dir * (self.stats.radius + 3.0);
-                    let base_offset = dir * (self.stats.radius - 2.0);
-                    let perpendicular = Vec2::new(-dir.y, dir.x) * 2.0;
-
-                    let p1 = tip;
-                    let p2 = self.pos + base_offset + perpendicular;
-                    let p3 = self.pos + base_offset - perpendicular;
-
-                    draw_triangle(p1, p2, p3, self.visual_config.indicator_color.to_color());
-                }
+                draw_direction_indicator(
+                    self.pos,
+                    self.vel,
+                    self.stats.radius,
+                    self.visual_config.indicator_color,
+                    2.0,
+                );
             }
         }
     }

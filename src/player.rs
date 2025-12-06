@@ -3,7 +3,7 @@ use macroquad::prelude::*;
 use crate::collision::{Collidable, Collider};
 use crate::enemy::EntityStats;
 use crate::projectile::Projectile;
-use crate::visual_config::PlayerVisualConfig;
+use crate::visual_config::{PlayerVisualConfig, draw_direction_indicator};
 use crate::weapon::{Weapon, WeaponType};
 
 #[derive(Debug, Clone)]
@@ -58,18 +58,13 @@ impl Player {
         );
 
         // Draw direction indicator triangle
-        if self.vel.length() > 0.1 {
-            let dir = self.vel.normalize();
-            let tip = self.pos + dir * (self.stats.radius + 5.0);
-            let base_offset = dir * self.stats.radius;
-            let perpendicular = Vec2::new(-dir.y, dir.x) * self.visual_config.indicator_size;
-
-            let p1 = tip;
-            let p2 = self.pos + base_offset + perpendicular;
-            let p3 = self.pos + base_offset - perpendicular;
-
-            draw_triangle(p1, p2, p3, self.visual_config.indicator_color.to_color());
-        }
+        draw_direction_indicator(
+            self.pos,
+            self.vel,
+            self.stats.radius,
+            self.visual_config.indicator_color,
+            self.visual_config.indicator_size,
+        );
     }
 
     pub fn input(&mut self) {
