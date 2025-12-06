@@ -1,8 +1,10 @@
 use macroquad::prelude::*;
 
+mod collision;
 mod enemy;
 mod player;
 
+use collision::{Collidable, check_collision};
 use enemy::{DEFAULT_ENEMY_MAX_SPEED, Enemy};
 use player::Player;
 
@@ -35,10 +37,13 @@ impl GameState {
             .iter()
             .enumerate()
             .filter_map(|(i, enemy)| {
-                let delta = self.player.pos - enemy.pos;
-                let dist_sq = delta.length_squared();
-                let radii_sum = self.player.radius() + enemy.radius();
-                if dist_sq < radii_sum * radii_sum {
+                let collision_data = check_collision(
+                    &self.player.collider(),
+                    self.player.position(),
+                    &enemy.collider(),
+                    enemy.position(),
+                );
+                if collision_data.collided {
                     Some(i)
                 } else {
                     None

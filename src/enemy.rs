@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+use crate::collision::{Collidable, Collider};
+
 const ENEMY_RADIUS: f32 = 15.0;
 const ENEMY_MAX_SPEED: f32 = 3.0;
 const ENEMY_ACCELERATION: f32 = 0.15;
@@ -32,10 +34,6 @@ impl Enemy {
         }
     }
 
-    pub fn radius(&self) -> f32 {
-        ENEMY_RADIUS
-    }
-
     pub fn draw(&self) {
         draw_circle(self.pos.x, self.pos.y, ENEMY_RADIUS, RED);
     }
@@ -59,6 +57,18 @@ impl Enemy {
         if speed > self.v_max {
             self.vel = self.vel.normalize() * self.v_max;
         }
+    }
+}
+
+impl Collidable for Enemy {
+    fn collider(&self) -> Collider {
+        Collider::Circle {
+            radius: ENEMY_RADIUS,
+        }
+    }
+
+    fn position(&self) -> Vec2 {
+        self.pos
     }
 }
 

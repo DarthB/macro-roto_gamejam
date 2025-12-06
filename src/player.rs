@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+use crate::collision::{Collidable, Collider};
+
 const PLAYER_RADIUS: f32 = 20.0;
 const PLAYER_MAX_SPEED: f32 = 5.0;
 const PLAYER_ACCELERATION: f32 = 1.0;
@@ -19,10 +21,6 @@ impl Player {
             vel: Vec2::ZERO,
             v_max: PLAYER_MAX_SPEED,
         }
-    }
-
-    pub fn radius(&self) -> f32 {
-        PLAYER_RADIUS
     }
 
     pub fn draw(&self) {
@@ -63,5 +61,17 @@ impl Player {
         if speed > self.v_max {
             self.vel = self.vel.normalize() * self.v_max;
         }
+    }
+}
+
+impl Collidable for Player {
+    fn collider(&self) -> Collider {
+        Collider::Circle {
+            radius: PLAYER_RADIUS,
+        }
+    }
+
+    fn position(&self) -> Vec2 {
+        self.pos
     }
 }
