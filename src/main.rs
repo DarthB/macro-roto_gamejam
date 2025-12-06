@@ -1,18 +1,222 @@
 use macroquad::prelude::*;
 
-#[macroquad::main("MyGame")]
+mod player;
+use player::Player;
+
+const DT: f64 = 1.0 / 30.0;
+
+struct Enemy {
+    x: f32,
+    y: f32,
+
+    vx: f32,
+    vy: f32,
+    v_max: f32,
+
+    acc: f32,
+}
+
+impl Enemy {
+    pub fn spawn(x: f32, y: f32, v_max: f32) -> Self {
+        // random velocity to target on a circle in the center of the screen:
+        let tx = screen_width() / 2.0 + rand::gen_range(-50.0, 50.0);
+        let ty = screen_height() / 2.0 + rand::gen_range(-50.0, 50.0);
+
+        let dir_x = tx - x;
+        let dir_y = ty - y;
+        let len = (dir_x * dir_x + dir_y * dir_y).sqrt();
+        let vx = dir_x / len * rand::gen_range(1.0, v_max);
+        let vy = dir_y / len * rand::gen_range(1.0, v_max);
+        
+        Self {
+            x,
+            y,
+            vx,            
+            vy,
+            v_max: 3.0,
+            acc: 0.15,
+        }
+    }
+
+    pub fn draw(&self) {
+        draw_circle(self.x, self.y, 15.0, RED);
+    }
+
+    pub fn update(&mut self) {
+        // add acceleration:
+        let accx = self.acc * if self.vx < 0.0 { -1.0 } else { 1.0 };
+        let accy = self.acc * if self.vy < 0.0 { -1.0 } else { 1.0 };
+        self.vx += accx;
+        self.vy += accy;    
+        
+        // clamp velocity
+        let v = (self.vx * self.vx + self.vy * self.vy).sqrt();
+        if v > self.v_max {
+            self.vx = self.vx / v * self.v_max;
+            self.vy = self.vy / v * self.v_max;
+        }
+
+        self.x += self.vx;
+        self.y += self.vy;
+    }
+}
+
+struct GameState {
+    player: Player,
+    t_frame: f64,
+    enemies: Vec<Enemy>,
+    b_game_over: bool,
+    wave: u32,
+}
+
+impl GameState {
+    pub fn new() -> Self {
+        Self {
+            player: Player::new(screen_width() / 2.0, screen_height() / 2.0),
+            t_frame: 0.0,
+            enemies: vec![],
+            b_game_over: false,
+            wave: 0,
+        }
+    }
+
+    fn check_collisions(&mut self) {
+        let enemies_collided_with_player: Vec<usize> = self.enemies.iter().enumerate().filter_map(|(i, enemy)| {
+            let dx = self.player.x - enemy.x;
+            let dy = self.player.y - enemy.y;
+            let dist_sq = dx * dx + dy * dy;
+            let radii_sum = 20.0 + 15.0;
+            if dist_sq < radii_sum * radii_sum {
+                Some(i)
+            } else {
+                None
+            }
+        }).collect();
+
+        // no health system, just game over on first collision
+        if !enemies_collided_with_player.is_empty() {
+            self.b_game_over = true;
+        }
+        
+        // later remove collided enemies
+        for &i in enemies_collided_with_player.iter().rev() {
+            self.despawn_enemy(i);
+        }
+    }
+
+    fn despawn_enemy(&mut self, index: usize) {
+        self.enemies.remove(index);
+    }
+
+    fn despawn_enemies_out_of_bounds(&mut self) {
+        let w = screen_width();
+        let h = screen_height();
+        self.enemies.retain(|enemy| {
+            enemy.x >= -50.0 && enemy.x <= w + 50.0 && enemy.y >= -50.0 && enemy.y <= h + 50.0
+        });
+    }   
+}
+
+fn input(gs: &mut GameState) {
+    gs.player.input();
+}
+
+fn update(gs: &mut GameState) {
+    gs.player.update();
+    for enemy in gs.enemies.iter_mut() {
+        enemy.update();
+    }
+
+    // this may trigger game over
+    gs.check_collisions();
+
+    gs.despawn_enemies_out_of_bounds();
+}
+
+fn draw(gs: &GameState) {
+    gs.player.draw();
+    for enemy in gs.enemies.iter() {
+        enemy.draw();
+    }
+    draw_text("Move the Player with arrow keys", 20.0, 20.0, 20.0, DARKGRAY);
+    draw_text("Avoid the Red Enemies!", 20.0, 40.0, 20.0, DARKGRAY);
+    let wave_text = format!("Wave: {}", gs.wave);
+    draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
+}
+
+#[macroquad::main("Auto Scriptable by Roto")]
 async fn main() {
     init_roto();
 
+    let mut gs = GameState::new();
+    let mut t_prev = get_time();
+    let mut t_passed: f64 = 0.0;
+    let mut n_logic_updates: u32 = 0;
+
     loop {
-        clear_background(RED);
+        if gs.b_game_over {
+            clear_background(BLACK);
+            draw_text("GAME OVER", screen_width() / 2.0 - 80.0, screen_height() / 2.0, 40.0, RED);
+            draw_text("Press Return to Restart", screen_width() / 2.0 - 120.0, screen_height() / 2.0 + 50.0, 20.0, DARKGRAY);
+            if is_key_pressed(KeyCode::Enter) {
+                gs = GameState::new();
+            }
+            
+            next_frame().await;
+            continue;
+        } else if gs.enemies.is_empty() {
+            // spawn new wave
+            let wave = gs.wave;
+            spawn_wave(&mut gs, 10 + wave * 5);
+            gs.wave += 1;
+        }
 
-        draw_line(40.0, 40.0, 100.0, 200.0, 15.0, BLUE);
-        draw_rectangle(screen_width() / 2.0 - 60.0, 100.0, 120.0, 60.0, GREEN);
+        // update time counters
+        gs.t_frame = get_time();
+        t_passed += gs.t_frame - t_prev;
 
-        draw_text("Hello, Macroquad!", 20.0, 20.0, 30.0, DARKGRAY);
+        // update logic at fixed time steps
+        while t_passed >= DT {
+            input(&mut gs);
+            update(&mut gs);
+            t_passed -= DT;
+            n_logic_updates += 1;
+        }
 
+        if n_logic_updates > 0 {
+            if n_logic_updates > 1 {
+                println!("logic updates: {} - LOW FRAME RATE", n_logic_updates);
+            }
+            n_logic_updates = 0;
+        }
+
+
+        // render every frame:
+        clear_background(BLACK);
+        draw(&gs);
+
+        t_prev = gs.t_frame;
         next_frame().await
+    }
+}
+
+fn spawn_wave(gs: &mut GameState, n_enemies: u32) {
+    let w = screen_width();
+    let h = screen_height();
+    for _ in 0..n_enemies {
+        let x = if rand::gen_range(0, 2) == 0 {
+            // left or right edge
+            if rand::gen_range(0, 2) == 0 { 0.0 } else { w }
+        } else {
+            rand::gen_range(0.0, w)
+        };
+        let y = if x == 0.0 || x == w {
+            rand::gen_range(0.0, h)
+        } else {
+            if rand::gen_range(0, 2) == 0 { 0.0 } else { h }
+        };
+        let enemy = Enemy::spawn(x, y, 3.0);
+        gs.enemies.push(enemy);
     }
 }
 
