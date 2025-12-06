@@ -2,6 +2,8 @@ We join the Rust and C++ Dragons Game Jam with the theme "Elve on a Shelf".
 
 Beside making a fun auto battler, which is not very creative. We want to learn macroquad and the embedded rust-like scripting language roto.
 
+We name our project "Macro Roto - The Auto Battler".
+
 ## Architecture
 
 This is a 2D auto-battler game built with:

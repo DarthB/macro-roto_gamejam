@@ -20,7 +20,7 @@ fn window_conf() -> Conf {
         window_height: 800,
         window_resizable: false,
         fullscreen: false,
-        window_title: "Auto Scriptable by Roto".to_owned(),
+        window_title: "Macro Roto - The Auto Battler".to_owned(),
         ..Default::default()
     }
 }
