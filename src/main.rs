@@ -5,6 +5,7 @@ mod enemy;
 mod player;
 mod projectile;
 mod roto_script;
+mod visual_config;
 mod weapon;
 
 use collision::{Collidable, check_collision};
@@ -12,6 +13,7 @@ use enemy::{Enemy, EnemyType};
 use player::Player;
 use projectile::Projectile;
 use roto_script::{RotoScriptManager, WaveConfig};
+use visual_config::GameVisualConfig;
 
 const DT: f64 = 1.0 / 30.0;
 
@@ -35,6 +37,7 @@ struct GameState {
     roto_manager: RotoScriptManager,
     error_message: Option<String>,
     paused: bool,
+    visual_config: GameVisualConfig,
 }
 
 impl GameState {
@@ -51,8 +54,15 @@ impl GameState {
                 friction: 0.9,
             });
 
+        let visual_config = roto_manager
+            .get_visual_config()
+            .unwrap_or(GameVisualConfig::default());
+
+        let mut player = Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats);
+        player.override_visual_config(visual_config.player);
+
         Self {
-            player: Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats),
+            player,
             t_frame: get_time(),
             t_prev: get_time(),
             t_passed: 0.0,
@@ -64,6 +74,7 @@ impl GameState {
             roto_manager,
             error_message: None,
             paused: false,
+            visual_config,
         }
     }
 
@@ -277,6 +288,25 @@ impl GameState {
             };
             enemy.override_stats(stats);
         }
+
+        // Reload visual configuration
+        self.visual_config = self.roto_manager.get_visual_config()?;
+
+        // Override visual configs for existing entities
+        self.player
+            .override_visual_config(self.visual_config.player);
+
+        for enemy in self.enemies.iter_mut() {
+            let visual_config = match enemy.enemy_type {
+                EnemyType::Basic => self.visual_config.basic_enemy,
+                EnemyType::Chaser => self.visual_config.chaser_enemy,
+            };
+            enemy.override_visual_config(visual_config);
+        }
+
+        // Note: Projectiles get visual config when created, so existing ones keep their colors
+        // This is actually desired behavior - projectiles in flight maintain their appearance
+
         Ok(())
     }
 }
@@ -393,7 +423,7 @@ fn update(gs: &mut GameState) {
     let dt = DT as f32;
 
     // Update player and get new projectiles from weapon firing
-    let new_projectiles = gs.player.update(dt);
+    let new_projectiles = gs.player.update(dt, &gs.visual_config);
     gs.projectiles.extend(new_projectiles);
 
     let player_pos = gs.player.pos;
@@ -527,26 +557,28 @@ fn spawn_wave(gs: &mut GameState, config: WaveConfig) -> Result<(), String> {
     // Spawn basic enemies
     for _ in 0..config.basic_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let enemy = Enemy::spawn(
+        let mut enemy = Enemy::spawn(
             x,
             y,
             EnemyType::Basic,
             basic_stats,
             constants.spawn_target_offset,
         );
+        enemy.override_visual_config(gs.visual_config.basic_enemy);
         gs.enemies.push(enemy);
     }
 
     // Spawn chaser enemies
     for _ in 0..config.chaser_enemy_count {
         let (x, y) = get_spawn_position(w, h);
-        let enemy = Enemy::spawn(
+        let mut enemy = Enemy::spawn(
             x,
             y,
             EnemyType::Chaser,
             chaser_stats,
             constants.spawn_target_offset,
         );
+        enemy.override_visual_config(gs.visual_config.chaser_enemy);
         gs.enemies.push(enemy);
     }
 

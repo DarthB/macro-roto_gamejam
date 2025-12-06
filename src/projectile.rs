@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
+use crate::visual_config::ProjectileVisualConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum ProjectileType {
@@ -65,10 +66,16 @@ pub struct Projectile {
     pub stats: ProjectileStats,
     pub time_remaining: f32,
     pub source_pos: Vec2, // Origin position (useful for pulse)
+    pub visual_config: ProjectileVisualConfig,
 }
 
 impl Projectile {
-    pub fn spawn_energy_ball(pos: Vec2, direction: Vec2, stats: ProjectileStats) -> Self {
+    pub fn spawn_energy_ball(
+        pos: Vec2,
+        direction: Vec2,
+        stats: ProjectileStats,
+        visual_config: ProjectileVisualConfig,
+    ) -> Self {
         let vel = direction.normalize() * stats.speed;
         Self {
             pos,
@@ -77,10 +84,15 @@ impl Projectile {
             stats,
             time_remaining: stats.time_to_live,
             source_pos: pos,
+            visual_config,
         }
     }
 
-    pub fn spawn_pulse(pos: Vec2, stats: ProjectileStats) -> Self {
+    pub fn spawn_pulse(
+        pos: Vec2,
+        stats: ProjectileStats,
+        visual_config: ProjectileVisualConfig,
+    ) -> Self {
         Self {
             pos,
             vel: Vec2::ZERO,
@@ -88,10 +100,16 @@ impl Projectile {
             stats,
             time_remaining: stats.time_to_live,
             source_pos: pos,
+            visual_config,
         }
     }
 
-    pub fn spawn_homing_missile(pos: Vec2, direction: Vec2, stats: ProjectileStats) -> Self {
+    pub fn spawn_homing_missile(
+        pos: Vec2,
+        direction: Vec2,
+        stats: ProjectileStats,
+        visual_config: ProjectileVisualConfig,
+    ) -> Self {
         let vel = direction.normalize() * stats.speed;
         Self {
             pos,
@@ -100,6 +118,7 @@ impl Projectile {
             stats,
             time_remaining: stats.time_to_live,
             source_pos: pos,
+            visual_config,
         }
     }
 
@@ -167,19 +186,25 @@ impl Projectile {
     pub fn draw(&self) {
         match self.projectile_type {
             ProjectileType::EnergyBall => {
-                draw_circle(self.pos.x, self.pos.y, self.stats.radius, PURPLE);
+                draw_circle(
+                    self.pos.x,
+                    self.pos.y,
+                    self.stats.radius,
+                    self.visual_config.primary_color.to_color(),
+                );
             }
             ProjectileType::Pulse => {
-                // Draw semi-transparent purple rectangle for pulse
+                // Draw semi-transparent rectangle for pulse with fade
                 let alpha = (self.time_remaining / self.stats.time_to_live).clamp(0.0, 1.0);
-                let color = Color::new(0.5, 0.0, 0.5, alpha * 0.3);
+                let mut fill_color = self.visual_config.primary_color;
+                fill_color.a *= alpha;
 
                 draw_rectangle(
                     self.pos.x - self.stats.width / 2.0,
                     self.pos.y - self.stats.height / 2.0,
                     self.stats.width,
                     self.stats.height,
-                    color,
+                    fill_color.to_color(),
                 );
 
                 // Draw outline
@@ -189,12 +214,17 @@ impl Projectile {
                     self.stats.width,
                     self.stats.height,
                     2.0,
-                    PURPLE,
+                    self.visual_config.secondary_color.to_color(),
                 );
             }
             ProjectileType::HomingMissile => {
-                // Draw orange circle for homing missile
-                draw_circle(self.pos.x, self.pos.y, self.stats.radius, ORANGE);
+                // Draw circle for homing missile
+                draw_circle(
+                    self.pos.x,
+                    self.pos.y,
+                    self.stats.radius,
+                    self.visual_config.primary_color.to_color(),
+                );
 
                 // Draw direction indicator (small triangle pointing in velocity direction)
                 if self.vel.length() > 0.0 {
@@ -207,7 +237,7 @@ impl Projectile {
                     let p2 = self.pos + base_offset + perpendicular;
                     let p3 = self.pos + base_offset - perpendicular;
 
-                    draw_triangle(p1, p2, p3, YELLOW);
+                    draw_triangle(p1, p2, p3, self.visual_config.indicator_color.to_color());
                 }
             }
         }

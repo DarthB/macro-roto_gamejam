@@ -23,3 +23,56 @@ fn get_wave_composition(wave_number: u32) -> WaveComposition {
         WaveComposition.new(10, 15 + (wave_number - 5) * 2)
     }
 }
+
+fn get_visual_config() -> GameVisualConfig {
+    let player_visual = PlayerVisualConfig.new(
+        ColorConfig.white(),
+        ColorConfig.green(),
+        3.0
+    );
+
+    let basic_enemy_visual = EnemyVisualConfig.new(
+        ColorConfig.new(0.75, 0.0, 0.0, 1.0),
+        ColorConfig.white(),
+        3.0
+    );
+
+    let chaser_enemy_visual = EnemyVisualConfig.new(
+        ColorConfig.orange(),
+        ColorConfig.white(),
+        3.0
+    );
+
+    let energy_ball_visual = ProjectileVisualConfig.new(
+        ColorConfig.purple(),
+        ColorConfig.purple(),
+        ColorConfig.white()
+    );
+
+    let pulse_visual = ProjectileVisualConfig.new(
+        ColorConfig.new(0.5, 0.0, 0.5, 0.3),
+        ColorConfig.purple(),
+        ColorConfig.white()
+    );
+
+    let homing_missile_visual = ProjectileVisualConfig.new(
+        ColorConfig.orange(),
+        ColorConfig.yellow(),
+        ColorConfig.yellow()
+    );
+
+    let pulse_blend = BlendConfig.new(
+        ColorConfig.new(0.8, 0.2, 0.8, 0.8),
+        ColorConfig.new(0.3, 0.0, 0.3, 0.1)
+    );
+
+    GameVisualConfig.new(
+        player_visual,
+        basic_enemy_visual,
+        chaser_enemy_visual,
+        energy_ball_visual,
+        pulse_visual,
+        homing_missile_visual,
+        pulse_blend
+    )
+}

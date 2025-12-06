@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::projectile::{Projectile, ProjectileStats};
+use crate::visual_config::ProjectileVisualConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum WeaponType {
@@ -80,7 +81,12 @@ impl Weapon {
         self.cooldown_remaining <= 0.0
     }
 
-    pub fn fire(&mut self, player_pos: Vec2, player_facing: Vec2) -> Vec<Projectile> {
+    pub fn fire(
+        &mut self,
+        player_pos: Vec2,
+        player_facing: Vec2,
+        visual_config: ProjectileVisualConfig,
+    ) -> Vec<Projectile> {
         if !self.can_fire() {
             return Vec::new();
         }
@@ -89,13 +95,22 @@ impl Weapon {
         self.cooldown_remaining = self.stats.cooldown;
 
         match self.weapon_type {
-            WeaponType::EnergyBall => self.fire_energy_ball(player_pos, player_facing),
-            WeaponType::Pulse => self.fire_pulse(player_pos),
-            WeaponType::HomingMissile => self.fire_homing_missile(player_pos, player_facing),
+            WeaponType::EnergyBall => {
+                self.fire_energy_ball(player_pos, player_facing, visual_config)
+            }
+            WeaponType::Pulse => self.fire_pulse(player_pos, visual_config),
+            WeaponType::HomingMissile => {
+                self.fire_homing_missile(player_pos, player_facing, visual_config)
+            }
         }
     }
 
-    fn fire_energy_ball(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<Projectile> {
+    fn fire_energy_ball(
+        &self,
+        player_pos: Vec2,
+        player_facing: Vec2,
+        visual_config: ProjectileVisualConfig,
+    ) -> Vec<Projectile> {
         let mut projectiles = Vec::new();
 
         if self.stats.projectile_count == 1 {
@@ -104,6 +119,7 @@ impl Weapon {
                 player_pos,
                 player_facing,
                 self.stats.projectile_stats,
+                visual_config,
             );
             projectiles.push(projectile);
         } else {
@@ -123,6 +139,7 @@ impl Weapon {
                     player_pos,
                     direction,
                     self.stats.projectile_stats,
+                    visual_config,
                 );
                 projectiles.push(projectile);
             }
@@ -131,17 +148,28 @@ impl Weapon {
         projectiles
     }
 
-    fn fire_pulse(&self, player_pos: Vec2) -> Vec<Projectile> {
-        let projectile = Projectile::spawn_pulse(player_pos, self.stats.projectile_stats);
+    fn fire_pulse(
+        &self,
+        player_pos: Vec2,
+        visual_config: ProjectileVisualConfig,
+    ) -> Vec<Projectile> {
+        let projectile =
+            Projectile::spawn_pulse(player_pos, self.stats.projectile_stats, visual_config);
         vec![projectile]
     }
 
-    fn fire_homing_missile(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<Projectile> {
+    fn fire_homing_missile(
+        &self,
+        player_pos: Vec2,
+        player_facing: Vec2,
+        visual_config: ProjectileVisualConfig,
+    ) -> Vec<Projectile> {
         // For now, fire in facing direction. The homing behavior will take over during update
         let projectile = Projectile::spawn_homing_missile(
             player_pos,
             player_facing,
             self.stats.projectile_stats,
+            visual_config,
         );
         vec![projectile]
     }

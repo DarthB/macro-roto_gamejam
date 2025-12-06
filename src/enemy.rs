@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
+use crate::visual_config::EnemyVisualConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum EnemyType {
@@ -21,6 +22,7 @@ pub struct Enemy {
     pub vel: Vec2,
     pub enemy_type: EnemyType,
     stats: EntityStats,
+    visual_config: EnemyVisualConfig,
 }
 
 impl Enemy {
@@ -41,11 +43,17 @@ impl Enemy {
         let speed = rand::gen_range(1.0, stats.max_speed);
         let vel = dir * speed;
 
+        let visual_config = match enemy_type {
+            EnemyType::Basic => EnemyVisualConfig::basic_default(),
+            EnemyType::Chaser => EnemyVisualConfig::chaser_default(),
+        };
+
         Self {
             pos: spawn_pos,
             vel,
             enemy_type,
             stats,
+            visual_config,
         }
     }
 
@@ -53,25 +61,30 @@ impl Enemy {
         self.stats = stats;
     }
 
-    pub fn draw(&self) {
-        let color = match self.enemy_type {
-            EnemyType::Basic => RED,
-            EnemyType::Chaser => ORANGE,
-        };
-        draw_circle(self.pos.x, self.pos.y, self.stats.radius, color);
+    pub fn override_visual_config(&mut self, visual_config: EnemyVisualConfig) {
+        self.visual_config = visual_config;
+    }
 
-        // Draw white direction indicator triangle
+    pub fn draw(&self) {
+        draw_circle(
+            self.pos.x,
+            self.pos.y,
+            self.stats.radius,
+            self.visual_config.circle_color.to_color(),
+        );
+
+        // Draw direction indicator triangle
         if self.vel.length() > 0.1 {
             let dir = self.vel.normalize();
             let tip = self.pos + dir * (self.stats.radius + 5.0);
             let base_offset = dir * self.stats.radius;
-            let perpendicular = Vec2::new(-dir.y, dir.x) * 3.0;
+            let perpendicular = Vec2::new(-dir.y, dir.x) * self.visual_config.indicator_size;
 
             let p1 = tip;
             let p2 = self.pos + base_offset + perpendicular;
             let p3 = self.pos + base_offset - perpendicular;
 
-            draw_triangle(p1, p2, p3, WHITE);
+            draw_triangle(p1, p2, p3, self.visual_config.indicator_color.to_color());
         }
     }
 
