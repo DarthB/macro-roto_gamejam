@@ -165,7 +165,8 @@ impl GameState {
                     enemies_to_remove.push(enemy_idx);
                     // Energy balls get removed on hit, pulses stay
                     match projectile.projectile_type {
-                        projectile::ProjectileType::EnergyBall => {
+                        projectile::ProjectileType::EnergyBall
+                        | projectile::ProjectileType::HomingMissile => {
                             projectiles_to_remove.push(proj_idx);
                         }
                         projectile::ProjectileType::Pulse => {
@@ -403,6 +404,8 @@ fn update(gs: &mut GameState) {
     // Update projectiles
     for projectile in gs.projectiles.iter_mut() {
         projectile.update(dt);
+        // Update homing behavior for homing missiles
+        projectile.update_homing(dt, &gs.enemies);
     }
 
     // Remove expired projectiles
@@ -429,9 +432,10 @@ impl GameState {
         let w = screen_width();
         let h = screen_height();
         self.projectiles.retain(|projectile| {
-            // Only remove energy balls that go out of bounds, keep pulses
+            // Only remove energy balls and homing missiles that go out of bounds, keep pulses
             match projectile.projectile_type {
-                projectile::ProjectileType::EnergyBall => {
+                projectile::ProjectileType::EnergyBall
+                | projectile::ProjectileType::HomingMissile => {
                     projectile.pos.x >= -margin
                         && projectile.pos.x <= w + margin
                         && projectile.pos.y >= -margin
@@ -452,14 +456,14 @@ fn draw(gs: &GameState) {
         projectile.draw();
     }
     draw_text(
-        "Move the Player with arrow keys",
+        "Auto-battler: Move with arrow keys, weapon fire automatically",
         20.0,
         20.0,
         20.0,
         DARKGRAY,
     );
     draw_text(
-        "Auto-battler: Weapons fire automatically! Avoid the enemies. Don't leave the Screen!",
+        "Avoid the enemies. Don't leave the Screen! OR DIE!",
         20.0,
         40.0,
         20.0,

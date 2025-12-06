@@ -16,11 +16,11 @@ pub struct Player {
 
 impl Player {
     pub fn new(x: f32, y: f32, stats: EntityStats) -> Self {
-        // Randomly select one of the two weapon types at game start
-        let weapon_type = if rand::gen_range(0, 2) == 0 {
-            WeaponType::EnergyBall
-        } else {
-            WeaponType::Pulse
+        // Randomly select one of the three weapon types at game start
+        let weapon_type = match rand::gen_range(0, 3) {
+            0 => WeaponType::EnergyBall,
+            1 => WeaponType::Pulse,
+            _ => WeaponType::HomingMissile,
         };
 
         let weapon = Weapon::new(weapon_type);

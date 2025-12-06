@@ -6,6 +6,7 @@ use crate::projectile::{Projectile, ProjectileStats};
 pub enum WeaponType {
     EnergyBall,
     Pulse,
+    HomingMissile,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -34,6 +35,15 @@ impl WeaponStats {
             projectile_stats: ProjectileStats::pulse_default(),
         }
     }
+
+    pub fn homing_missile_default() -> Self {
+        Self {
+            cooldown: 2.0, // Fire every 2 seconds
+            projectile_count: 1,
+            spread_angle: 0.0, // Not used for single homing missile
+            projectile_stats: ProjectileStats::homing_missile_default(),
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -49,6 +59,7 @@ impl Weapon {
         let stats = match weapon_type {
             WeaponType::EnergyBall => WeaponStats::energy_ball_default(),
             WeaponType::Pulse => WeaponStats::pulse_default(),
+            WeaponType::HomingMissile => WeaponStats::homing_missile_default(),
         };
 
         Self {
@@ -80,6 +91,7 @@ impl Weapon {
         match self.weapon_type {
             WeaponType::EnergyBall => self.fire_energy_ball(player_pos, player_facing),
             WeaponType::Pulse => self.fire_pulse(player_pos),
+            WeaponType::HomingMissile => self.fire_homing_missile(player_pos, player_facing),
         }
     }
 
@@ -121,6 +133,16 @@ impl Weapon {
 
     fn fire_pulse(&self, player_pos: Vec2) -> Vec<Projectile> {
         let projectile = Projectile::spawn_pulse(player_pos, self.stats.projectile_stats);
+        vec![projectile]
+    }
+
+    fn fire_homing_missile(&self, player_pos: Vec2, player_facing: Vec2) -> Vec<Projectile> {
+        // For now, fire in facing direction. The homing behavior will take over during update
+        let projectile = Projectile::spawn_homing_missile(
+            player_pos,
+            player_facing,
+            self.stats.projectile_stats,
+        );
         vec![projectile]
     }
 

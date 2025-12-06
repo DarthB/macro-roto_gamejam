@@ -6,16 +6,18 @@ use crate::collision::{Collidable, Collider};
 pub enum ProjectileType {
     EnergyBall,
     Pulse,
+    HomingMissile,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct ProjectileStats {
     pub damage: f32,
     pub speed: f32,
-    pub radius: f32, // For EnergyBall (circle)
+    pub radius: f32, // For EnergyBall and HomingMissile (circle)
     pub width: f32,  // For Pulse (AABB)
     pub height: f32, // For Pulse (AABB)
     pub time_to_live: f32,
+    pub turning_rate: f32, // For HomingMissile steering speed (radians per second)
 }
 
 impl ProjectileStats {
@@ -27,6 +29,7 @@ impl ProjectileStats {
             width: 0.0,  // Not used for energy ball
             height: 0.0, // Not used for energy ball
             time_to_live: 2.0,
+            turning_rate: 0.0, // Not used for energy ball
         }
     }
 
@@ -38,6 +41,19 @@ impl ProjectileStats {
             width: 100.0,
             height: 100.0,
             time_to_live: 0.3,
+            turning_rate: 0.0, // Not used for pulse
+        }
+    }
+
+    pub fn homing_missile_default() -> Self {
+        Self {
+            damage: 20.0,
+            speed: 250.0,
+            radius: 6.0,
+            width: 0.0,  // Not used for homing missile
+            height: 0.0, // Not used for homing missile
+            time_to_live: 3.0,
+            turning_rate: 3.0, // 3 radians per second turning rate
         }
     }
 }
@@ -75,6 +91,18 @@ impl Projectile {
         }
     }
 
+    pub fn spawn_homing_missile(pos: Vec2, direction: Vec2, stats: ProjectileStats) -> Self {
+        let vel = direction.normalize() * stats.speed;
+        Self {
+            pos,
+            vel,
+            projectile_type: ProjectileType::HomingMissile,
+            stats,
+            time_remaining: stats.time_to_live,
+            source_pos: pos,
+        }
+    }
+
     pub fn update(&mut self, dt: f32) {
         self.time_remaining -= dt;
 
@@ -86,6 +114,49 @@ impl Projectile {
                 // Pulse stays at source position, doesn't move
                 self.pos = self.source_pos;
             }
+            ProjectileType::HomingMissile => {
+                self.pos += self.vel * dt;
+                // Homing behavior is handled separately via update_homing
+            }
+        }
+    }
+
+    pub fn update_homing(&mut self, dt: f32, enemies: &[crate::enemy::Enemy]) {
+        if self.projectile_type != ProjectileType::HomingMissile {
+            return;
+        }
+
+        // Find nearest enemy
+        let nearest_enemy = enemies.iter().min_by(|a, b| {
+            let dist_a = (a.pos - self.pos).length_squared();
+            let dist_b = (b.pos - self.pos).length_squared();
+            dist_a
+                .partial_cmp(&dist_b)
+                .unwrap_or(std::cmp::Ordering::Equal)
+        });
+
+        if let Some(target) = nearest_enemy {
+            let to_target = (target.pos - self.pos).normalize();
+            let current_dir = self.vel.normalize();
+
+            // Calculate desired turn angle
+            let cross = current_dir.x * to_target.y - current_dir.y * to_target.x;
+            let dot = current_dir.dot(to_target);
+            let angle_diff = cross.atan2(dot);
+
+            // Limit turning rate
+            let max_turn = self.stats.turning_rate * dt;
+            let turn_angle = angle_diff.clamp(-max_turn, max_turn);
+
+            // Apply rotation to velocity
+            let cos_turn = turn_angle.cos();
+            let sin_turn = turn_angle.sin();
+            let rotated_vel = Vec2::new(
+                self.vel.x * cos_turn - self.vel.y * sin_turn,
+                self.vel.x * sin_turn + self.vel.y * cos_turn,
+            );
+
+            self.vel = rotated_vel.normalize() * self.stats.speed;
         }
     }
 
@@ -121,6 +192,24 @@ impl Projectile {
                     PURPLE,
                 );
             }
+            ProjectileType::HomingMissile => {
+                // Draw orange circle for homing missile
+                draw_circle(self.pos.x, self.pos.y, self.stats.radius, ORANGE);
+
+                // Draw direction indicator (small triangle pointing in velocity direction)
+                if self.vel.length() > 0.0 {
+                    let dir = self.vel.normalize();
+                    let tip = self.pos + dir * (self.stats.radius + 3.0);
+                    let base_offset = dir * (self.stats.radius - 2.0);
+                    let perpendicular = Vec2::new(-dir.y, dir.x) * 2.0;
+
+                    let p1 = tip;
+                    let p2 = self.pos + base_offset + perpendicular;
+                    let p3 = self.pos + base_offset - perpendicular;
+
+                    draw_triangle(p1, p2, p3, YELLOW);
+                }
+            }
         }
     }
 
@@ -132,7 +221,7 @@ impl Projectile {
 impl Collidable for Projectile {
     fn collider(&self) -> Collider {
         match self.projectile_type {
-            ProjectileType::EnergyBall => Collider::Circle {
+            ProjectileType::EnergyBall | ProjectileType::HomingMissile => Collider::Circle {
                 radius: self.stats.radius,
             },
             ProjectileType::Pulse => Collider::Rect {
