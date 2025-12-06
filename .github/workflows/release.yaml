@@ -63,9 +63,9 @@ jobs:
       - name: Create release
         run: |
           mkdir -p build/macos/src/Game.app/Contents/MacOS/assets
-          cp -r assets/ build/macos/src/Game.app/Contents/MacOS/assets
-          cp -r credits/ build/macos/src/Game.app/Contents/MacOS/credits
-          cp -r scripts/ build/macos/src/Game.app/Contents/MacOS/scripts
+          cp -r assets build/macos/src/Game.app/Contents/MacOS/
+          cp -r credits build/macos/src/Game.app/Contents/MacOS/
+          cp -r scripts build/macos/src/Game.app/Contents/MacOS/
           cp target/release/${{ env.GAME_EXECUTABLE_NAME }} build/macos/src/Game.app/Contents/MacOS/
           strip build/macos/src/Game.app/Contents/MacOS/${{ env.GAME_EXECUTABLE_NAME }}
           mv build/macos/src/Game.app build/macos/src/${{ env.GAME_OSX_APP_NAME }}.app
