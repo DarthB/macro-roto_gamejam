@@ -21,40 +21,36 @@ pub struct ProjectileStats {
     pub turning_rate: f32, // For HomingMissile steering speed (radians per second)
 }
 
-impl ProjectileStats {
-    pub fn energy_ball_default() -> Self {
-        Self {
-            damage: 10.0,
-            speed: 300.0,
-            radius: 8.0,
-            width: 0.0,  // Not used for energy ball
-            height: 0.0, // Not used for energy ball
-            time_to_live: 2.0,
-            turning_rate: 0.0, // Not used for energy ball
-        }
-    }
-
-    pub fn pulse_default() -> Self {
-        Self {
-            damage: 15.0,
-            speed: 0.0,  // Not used for pulse
-            radius: 0.0, // Not used for pulse
-            width: 100.0,
-            height: 100.0,
-            time_to_live: 0.3,
-            turning_rate: 0.0, // Not used for pulse
-        }
-    }
-
-    pub fn homing_missile_default() -> Self {
-        Self {
-            damage: 20.0,
-            speed: 250.0,
-            radius: 6.0,
-            width: 0.0,  // Not used for homing missile
-            height: 0.0, // Not used for homing missile
-            time_to_live: 3.0,
-            turning_rate: 3.0, // 3 radians per second turning rate
+impl From<ProjectileType> for ProjectileStats {
+    fn from(projectile_type: ProjectileType) -> Self {
+        match projectile_type {
+            ProjectileType::EnergyBall => Self {
+                damage: 10.0,
+                speed: 300.0,
+                radius: 8.0,
+                width: 0.0,  // Not used for energy ball
+                height: 0.0, // Not used for energy ball
+                time_to_live: 2.0,
+                turning_rate: 0.0, // Not used for energy ball
+            },
+            ProjectileType::Pulse => Self {
+                damage: 15.0,
+                speed: 0.0,  // Not used for pulse
+                radius: 0.0, // Not used for pulse
+                width: 100.0,
+                height: 100.0,
+                time_to_live: 0.3,
+                turning_rate: 0.0, // Not used for pulse
+            },
+            ProjectileType::HomingMissile => Self {
+                damage: 20.0,
+                speed: 250.0,
+                radius: 6.0,
+                width: 0.0,  // Not used for homing missile
+                height: 0.0, // Not used for homing missile
+                time_to_live: 3.0,
+                turning_rate: 3.0, // 3 radians per second turning rate
+            },
         }
     }
 }

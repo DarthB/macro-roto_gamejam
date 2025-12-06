@@ -222,6 +222,12 @@ impl GameState {
         }
     }
 
+    fn is_in_bounds(pos: Vec2, margin: f32) -> bool {
+        let w = screen_width();
+        let h = screen_height();
+        pos.x >= -margin && pos.x <= w + margin && pos.y >= -margin && pos.y <= h + margin
+    }
+
     fn despawn_enemies_out_of_bounds(&mut self) {
         let margin = self
             .roto_manager
@@ -229,14 +235,8 @@ impl GameState {
             .map(|c| c.out_of_bounds_margin)
             .unwrap_or(50.0);
 
-        let w = screen_width();
-        let h = screen_height();
-        self.enemies.retain(|enemy| {
-            enemy.pos.x >= -margin
-                && enemy.pos.x <= w + margin
-                && enemy.pos.y >= -margin
-                && enemy.pos.y <= h + margin
-        });
+        self.enemies
+            .retain(|enemy| Self::is_in_bounds(enemy.pos, margin));
     }
 
     fn update_time_for_logic(&mut self) -> u32 {
@@ -459,17 +459,12 @@ impl GameState {
             .map(|c| c.out_of_bounds_margin)
             .unwrap_or(50.0);
 
-        let w = screen_width();
-        let h = screen_height();
         self.projectiles.retain(|projectile| {
             // Only remove energy balls and homing missiles that go out of bounds, keep pulses
             match projectile.projectile_type {
                 projectile::ProjectileType::EnergyBall
                 | projectile::ProjectileType::HomingMissile => {
-                    projectile.pos.x >= -margin
-                        && projectile.pos.x <= w + margin
-                        && projectile.pos.y >= -margin
-                        && projectile.pos.y <= h + margin
+                    Self::is_in_bounds(projectile.pos, margin)
                 }
                 projectile::ProjectileType::Pulse => true, // Pulses stay centered on player
             }

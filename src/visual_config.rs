@@ -1,5 +1,7 @@
 use macroquad::prelude::*;
 
+use crate::projectile::ProjectileType;
+
 /// RGB color configuration that can be used with Roto
 #[derive(Debug, Clone, Copy)]
 pub struct ColorConfig {
@@ -104,28 +106,24 @@ pub struct ProjectileVisualConfig {
     pub indicator_color: ColorConfig, // For direction indicators
 }
 
-impl ProjectileVisualConfig {
-    pub fn energy_ball_default() -> Self {
-        Self {
-            primary_color: ColorConfig::purple(),
-            secondary_color: ColorConfig::purple(), // Same as primary for now
-            indicator_color: ColorConfig::white(),
-        }
-    }
-
-    pub fn pulse_default() -> Self {
-        Self {
-            primary_color: ColorConfig::new(0.5, 0.0, 0.5, 0.3), // Semi-transparent purple
-            secondary_color: ColorConfig::purple(),              // Outline color
-            indicator_color: ColorConfig::white(),
-        }
-    }
-
-    pub fn homing_missile_default() -> Self {
-        Self {
-            primary_color: ColorConfig::orange(),
-            secondary_color: ColorConfig::yellow(), // For direction triangle
-            indicator_color: ColorConfig::yellow(),
+impl From<ProjectileType> for ProjectileVisualConfig {
+    fn from(projectile_type: ProjectileType) -> Self {
+        match projectile_type {
+            ProjectileType::EnergyBall => Self {
+                primary_color: ColorConfig::purple(),
+                secondary_color: ColorConfig::purple(), // Same as primary for now
+                indicator_color: ColorConfig::white(),
+            },
+            ProjectileType::Pulse => Self {
+                primary_color: ColorConfig::new(0.5, 0.0, 0.5, 0.3), // Semi-transparent purple
+                secondary_color: ColorConfig::purple(),              // Outline color
+                indicator_color: ColorConfig::white(),
+            },
+            ProjectileType::HomingMissile => Self {
+                primary_color: ColorConfig::orange(),
+                secondary_color: ColorConfig::yellow(), // For direction triangle
+                indicator_color: ColorConfig::yellow(),
+            },
         }
     }
 }
@@ -182,9 +180,9 @@ impl GameVisualConfig {
             player: PlayerVisualConfig::default(),
             basic_enemy: EnemyVisualConfig::basic_default(),
             chaser_enemy: EnemyVisualConfig::chaser_default(),
-            energy_ball: ProjectileVisualConfig::energy_ball_default(),
-            pulse: ProjectileVisualConfig::pulse_default(),
-            homing_missile: ProjectileVisualConfig::homing_missile_default(),
+            energy_ball: ProjectileVisualConfig::from(ProjectileType::EnergyBall),
+            pulse: ProjectileVisualConfig::from(ProjectileType::Pulse),
+            homing_missile: ProjectileVisualConfig::from(ProjectileType::HomingMissile),
             pulse_blend: BlendConfig::pulse_default(),
         }
     }

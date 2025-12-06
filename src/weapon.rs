@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::projectile::{Projectile, ProjectileStats};
+use crate::projectile::{Projectile, ProjectileStats, ProjectileType};
 use crate::visual_config::ProjectileVisualConfig;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -18,31 +18,27 @@ pub struct WeaponStats {
     pub projectile_stats: ProjectileStats,
 }
 
-impl WeaponStats {
-    pub fn energy_ball_default() -> Self {
-        Self {
-            cooldown: 1.5, // Fire every 1.5 seconds
-            projectile_count: 1,
-            spread_angle: 0.0,
-            projectile_stats: ProjectileStats::energy_ball_default(),
-        }
-    }
-
-    pub fn pulse_default() -> Self {
-        Self {
-            cooldown: 3.0, // Fire every 3 seconds
-            projectile_count: 1,
-            spread_angle: 0.0, // Not used for pulse
-            projectile_stats: ProjectileStats::pulse_default(),
-        }
-    }
-
-    pub fn homing_missile_default() -> Self {
-        Self {
-            cooldown: 2.0, // Fire every 2 seconds
-            projectile_count: 1,
-            spread_angle: 0.0, // Not used for single homing missile
-            projectile_stats: ProjectileStats::homing_missile_default(),
+impl From<WeaponType> for WeaponStats {
+    fn from(weapon_type: WeaponType) -> Self {
+        match weapon_type {
+            WeaponType::EnergyBall => Self {
+                cooldown: 1.5, // Fire every 1.5 seconds
+                projectile_count: 1,
+                spread_angle: 0.0,
+                projectile_stats: ProjectileStats::from(ProjectileType::EnergyBall),
+            },
+            WeaponType::Pulse => Self {
+                cooldown: 3.0, // Fire every 3 seconds
+                projectile_count: 1,
+                spread_angle: 0.0, // Not used for pulse
+                projectile_stats: ProjectileStats::from(ProjectileType::Pulse),
+            },
+            WeaponType::HomingMissile => Self {
+                cooldown: 2.0, // Fire every 2 seconds
+                projectile_count: 1,
+                spread_angle: 0.0, // Not used for single homing missile
+                projectile_stats: ProjectileStats::from(ProjectileType::HomingMissile),
+            },
         }
     }
 }
@@ -57,11 +53,7 @@ pub struct Weapon {
 
 impl Weapon {
     pub fn new(weapon_type: WeaponType) -> Self {
-        let stats = match weapon_type {
-            WeaponType::EnergyBall => WeaponStats::energy_ball_default(),
-            WeaponType::Pulse => WeaponStats::pulse_default(),
-            WeaponType::HomingMissile => WeaponStats::homing_missile_default(),
-        };
+        let stats = WeaponStats::from(weapon_type);
 
         Self {
             weapon_type,
