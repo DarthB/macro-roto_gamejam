@@ -13,7 +13,7 @@
         <HarvestDirectory Include="..\..\..\target\release\assets">
               <ComponentGroupName>AssetsDirectory</ComponentGroupName>
               <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
-              <SuppressRootDirectory>false</SuppressRootDirectory>
+              <SuppressRootDirectory>true</SuppressRootDirectory>
         </HarvestDirectory>
         <BindPath Include="..\..\..\target\release\assets" />
     </ItemGroup>
@@ -22,7 +22,7 @@
         <HarvestDirectory Include="..\..\..\target\release\credits">
               <ComponentGroupName>CreditsDirectory</ComponentGroupName>
               <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
-              <SuppressRootDirectory>false</SuppressRootDirectory>
+              <SuppressRootDirectory>true</SuppressRootDirectory>
         </HarvestDirectory>
         <BindPath Include="..\..\..\target\release\credits" />
     </ItemGroup>
@@ -31,7 +31,7 @@
         <HarvestDirectory Include="..\..\..\target\release\scripts">
               <ComponentGroupName>ScriptsDirectory</ComponentGroupName>
               <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
-              <SuppressRootDirectory>false</SuppressRootDirectory>
+              <SuppressRootDirectory>true</SuppressRootDirectory>
         </HarvestDirectory>
         <BindPath Include="..\..\..\target\release\scripts" />
     </ItemGroup>
