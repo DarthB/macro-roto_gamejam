@@ -18,13 +18,14 @@ The architecture separates:
 ## Project Structure
 
 ```
+scripts/             - Roto Script files, only one for now
+├── main.roto        - The only script file defining enemy stats and wave composition (hot-reloadable)
 src/
 ├── main.rs          - Game loop, state machine (Playing/GameOver/ScriptError), main entry point
 ├── player.rs        - Player entity with movement, velocity, and input handling
 ├── enemy.rs         - Enemy entity with types (Basic/Chaser) and AI behaviors
 ├── collision.rs     - Collision detection system with Collider enum (Circle/Rect), CollisionData
 ├── roto_script.rs   - Roto integration: RotoScriptManager, WaveConfig, script loading/reloading
-└── waves.roto       - Roto script defining enemy stats and wave composition (hot-reloadable)
 ```
 
 ### Key Components
@@ -51,7 +52,7 @@ src/
 
 ### Testing
 - Always run `cargo build`, `cargo clippy`, and `cargo test` after changes
-- Test hot-reload by breaking waves.roto and pressing 'R' in-game
+- Test hot-reload by breaking `scripts/main.roto` and pressing 'R' in-game
 - Verify all three game states work correctly
 
 ### Roto Integration

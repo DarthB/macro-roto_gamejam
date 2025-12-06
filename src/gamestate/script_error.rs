@@ -24,7 +24,7 @@ pub fn process(gs: &mut GameState) {
         }
     }
     draw_text(
-        "Fix waves.roto and press 'R' to reload",
+        "Fix scripts/main.roto and press 'R' to reload",
         screen_width() / 2.0 - 150.0,
         screen_height() / 2.0 + 120.0,
         20.0,

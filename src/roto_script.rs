@@ -127,18 +127,18 @@ impl RotoScriptManager {
     }
 
     fn load_scripts(&mut self) {
-        match self.runtime.compile("waves.roto") {
+        match self.runtime.compile("scripts/main.roto") {
             Ok(_) => {
-                println!("✓ Loaded waves.roto successfully");
+                println!("✓ Loaded main.roto successfully");
             }
             Err(err) => {
-                eprintln!("ERROR loading waves.roto: {}", err);
+                eprintln!("ERROR loading main.roto: {}", err);
             }
         }
     }
 
     pub fn reload(&mut self) {
-        println!("Reloading waves.roto...");
+        println!("Reloading main.roto...");
         self.runtime = Self::create_runtime();
         self.load_scripts();
     }
@@ -149,8 +149,8 @@ impl RotoScriptManager {
     {
         let mut pkg = self
             .runtime
-            .compile("waves.roto")
-            .map_err(|err| format!("ERROR compiling waves.roto: {}", err))?;
+            .compile("scripts/main.roto")
+            .map_err(|err| format!("ERROR compiling main.roto: {}", err))?;
 
         call(&mut pkg)
     }

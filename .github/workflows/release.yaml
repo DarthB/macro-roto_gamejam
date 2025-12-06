@@ -12,8 +12,8 @@ on:
         type: string
 
 env:
-  GAME_EXECUTABLE_NAME: auto_roto
-  GAME_OSX_APP_NAME: Auto_Roto
+  GAME_EXECUTABLE_NAME: Macro_Roto_The_Auto_Battler
+  GAME_OSX_APP_NAME: Macro_Roto_The_Auto_Battler
 
 permissions:
   contents: write
@@ -65,6 +65,7 @@ jobs:
           mkdir -p build/macos/src/Game.app/Contents/MacOS/assets
           cp -r assets/ build/macos/src/Game.app/Contents/MacOS/assets
           cp -r credits/ build/macos/src/Game.app/Contents/MacOS/credits
+          cp -r scripts/ build/macos/src/Game.app/Contents/MacOS/scripts
           cp target/release/${{ env.GAME_EXECUTABLE_NAME }} build/macos/src/Game.app/Contents/MacOS/
           strip build/macos/src/Game.app/Contents/MacOS/${{ env.GAME_EXECUTABLE_NAME }}
           mv build/macos/src/Game.app build/macos/src/${{ env.GAME_OSX_APP_NAME }}.app
@@ -104,7 +105,7 @@ jobs:
           mv target/release/${{ env.GAME_EXECUTABLE_NAME }} .
       - name: Bundle release
         run: |
-          tar -czf ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz ${{ env.GAME_EXECUTABLE_NAME }} assets credits
+          tar -czf ${{ env.GAME_EXECUTABLE_NAME }}_linux.tar.gz ${{ env.GAME_EXECUTABLE_NAME }} assets credits scripts
       - name: Upload release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -140,10 +141,11 @@ jobs:
         run: |
           mkdir target/release/assets && cp -r assets target/release/assets
           mkdir target/release/credits && cp -r credits target/release/credits
+          mkdir target/release/scripts && cp -r credits target/release/scripts
       - name: Zip release
         uses: vimtor/action-zip@v1
         with:
-          files: target/release/assets/ target/release/credits/ target/release/${{ env.GAME_EXECUTABLE_NAME }}.exe
+          files: target/release/assets/ target/release/credits/ target/release/scripts/ target/release/${{ env.GAME_EXECUTABLE_NAME }}.exe
           dest: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
       - name: Create Installer
         if: ${{ env.BUILD_INSTALLER }}
@@ -154,7 +156,7 @@ jobs:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: ${{ env.GAME_EXECUTABLE_NAME }}_windows.zip
           asset_name: ${{ env.GAME_EXECUTABLE_NAME }}_${{ env.VERSION }}_windows.zip
-          tag: ${{ github.ref }}
+          tag: ${{ env.VERSION }}
           overwrite: true
       - name: Upload installer
         if: ${{ env.BUILD_INSTALLER }}
