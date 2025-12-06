@@ -65,7 +65,6 @@ jobs:
           mkdir -p build/macos/src/Game.app/Contents/MacOS
           mkdir -p build/macos/src/Game.app/Contents/Resources
           cp build/macos/Info.plist build/macos/src/Game.app/Contents/Info.plist
-          cp build/macos/src/Game.app/Contents/Resources/AppIcon.icns build/macos/src/Game.app/Contents/Resources/AppIcon.icns
           cp -r assets build/macos/src/Game.app/Contents/Resources/
           cp -r credits build/macos/src/Game.app/Contents/Resources/
           cp -r scripts build/macos/src/Game.app/Contents/Resources/
