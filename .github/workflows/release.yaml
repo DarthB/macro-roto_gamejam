@@ -141,7 +141,7 @@ jobs:
         run: |
           mkdir target/release/assets && cp -r assets target/release/assets
           mkdir target/release/credits && cp -r credits target/release/credits
-          mkdir target/release/scripts && cp -r credits target/release/scripts
+          mkdir target/release/scripts && cp -r scripts target/release/scripts    
       - name: Zip release
         uses: vimtor/action-zip@v1
         with:

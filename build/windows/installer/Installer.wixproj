@@ -10,20 +10,29 @@
     </ItemGroup>
 
     <ItemGroup>
-        <HarvestDirectory Include="..\..\..\assets">
+        <HarvestDirectory Include="..\..\..\target\release\assets">
               <ComponentGroupName>AssetsDirectory</ComponentGroupName>
               <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
               <SuppressRootDirectory>false</SuppressRootDirectory>
         </HarvestDirectory>
-        <BindPath Include="..\..\..\assets" />
+        <BindPath Include="..\..\..\target\release\assets" />
     </ItemGroup>
 
     <ItemGroup>
-        <HarvestDirectory Include="..\..\..\credits">
+        <HarvestDirectory Include="..\..\..\target\release\credits">
               <ComponentGroupName>CreditsDirectory</ComponentGroupName>
               <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
               <SuppressRootDirectory>false</SuppressRootDirectory>
         </HarvestDirectory>
-        <BindPath Include="..\..\..\credits" />
+        <BindPath Include="..\..\..\target\release\credits" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <HarvestDirectory Include="..\..\..\target\release\scripts">
+              <ComponentGroupName>ScriptsDirectory</ComponentGroupName>
+              <DirectoryRefId>INSTALLFOLDER</DirectoryRefId>
+              <SuppressRootDirectory>false</SuppressRootDirectory>
+        </HarvestDirectory>
+        <BindPath Include="..\..\..\target\release\scripts" />
     </ItemGroup>
 </Project>
