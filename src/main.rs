@@ -144,6 +144,19 @@ impl GameState {
         self.enemies.remove(index);
     }
 
+    fn check_player_bounds(&mut self) {
+        let w = screen_width();
+        let h = screen_height();
+
+        if self.player.pos.x < 0.0
+            || self.player.pos.x > w
+            || self.player.pos.y < 0.0
+            || self.player.pos.y > h
+        {
+            self.state = GameStateEnum::GameOver;
+        }
+    }
+
     fn despawn_enemies_out_of_bounds(&mut self) {
         let margin = self
             .roto_manager
@@ -200,19 +213,13 @@ impl GameState {
     fn reload_roto_script_internal(&mut self) -> Result<(), String> {
         self.roto_manager.reload();
 
-        self.player.override_stats(
-            self.roto_manager
-                .get_player_stats()?,
-        );
+        self.player
+            .override_stats(self.roto_manager.get_player_stats()?);
 
         for enemy in self.enemies.iter_mut() {
             let stats = match enemy.enemy_type {
-                EnemyType::Basic => self
-                    .roto_manager
-                    .get_enemy_stats(EnemyType::Basic)?,
-                EnemyType::Chaser => self
-                    .roto_manager
-                    .get_enemy_stats(EnemyType::Chaser)?,
+                EnemyType::Basic => self.roto_manager.get_enemy_stats(EnemyType::Basic)?,
+                EnemyType::Chaser => self.roto_manager.get_enemy_stats(EnemyType::Chaser)?,
             };
             enemy.override_stats(stats);
         }
@@ -337,6 +344,7 @@ fn update(gs: &mut GameState) {
 
     // this may trigger game over
     gs.check_collisions();
+    gs.check_player_bounds();
 
     gs.despawn_enemies_out_of_bounds();
 }
@@ -353,7 +361,13 @@ fn draw(gs: &GameState) {
         20.0,
         DARKGRAY,
     );
-    draw_text("Avoid the Red Enemies!", 20.0, 40.0, 20.0, DARKGRAY);
+    draw_text(
+        "Avoid the Red Enemies! Don't leave the screen or you die!",
+        20.0,
+        40.0,
+        20.0,
+        DARKGRAY,
+    );
     draw_text("Press 'R' to reload scripts", 20.0, 60.0, 20.0, DARKGRAY);
     draw_text("Press 'P' to pause", 20.0, 80.0, 20.0, DARKGRAY);
     let wave_text = format!("Wave: {}", gs.wave);
