@@ -12,14 +12,14 @@ pub fn process(gs: &mut GameState) {
         match gs.roto_manager.get_wave_config(wave) {
             Ok(config) => {
                 if let Err(err) = spawn_wave(gs, config) {
-                    gs.state = super::GameStateEnum::ScriptError;
+                    gs.set_next_state(super::GameStateEnum::ScriptError);
                     gs.error_message = Some(err);
                 } else {
                     gs.wave += 1;
                 }
             }
             Err(err) => {
-                gs.state = super::GameStateEnum::ScriptError;
+                gs.set_next_state(super::GameStateEnum::ScriptError);
                 gs.error_message = Some(err);
             }
         }

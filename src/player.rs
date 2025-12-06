@@ -17,23 +17,20 @@ pub struct Player {
 
 impl Player {
     pub fn new(x: f32, y: f32, stats: EntityStats) -> Self {
-        // Randomly select one of the three weapon types at game start
-        let weapon_type = match rand::gen_range(0, 3) {
-            0 => WeaponType::EnergyBall,
-            1 => WeaponType::Pulse,
-            _ => WeaponType::HomingMissile,
-        };
-
-        let weapon = Weapon::new(weapon_type);
-
+        // Player starts without a weapon - it will be set by weapon selection popup
         Self {
             pos: Vec2::new(x, y),
             vel: Vec2::ZERO,
             facing: Vec2::new(1.0, 0.0), // Start facing right
             stats,
-            weapons: vec![weapon],
+            weapons: vec![],
             visual_config: PlayerVisualConfig::default(),
         }
+    }
+
+    pub fn add_weapon(&mut self, weapon_type: WeaponType) {
+        let weapon = Weapon::new(weapon_type);
+        self.weapons.push(weapon);
     }
 
     pub fn override_stats(&mut self, stats: EntityStats) {

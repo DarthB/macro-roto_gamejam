@@ -1,6 +1,7 @@
 pub mod gameover;
 pub mod playing;
 pub mod script_error;
+pub mod weapon_selection;
 
 use macroquad::prelude::*;
 use std::collections::HashSet;
@@ -15,6 +16,7 @@ use crate::visual_config::GameVisualConfig;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum GameStateEnum {
+    WeaponSelection,
     Playing,
     GameOver,
     ScriptError,
@@ -29,6 +31,7 @@ pub struct GameState {
     pub enemies: Vec<Enemy>,
     pub projectiles: Vec<Projectile>,
     pub state: GameStateEnum,
+    pub next_state: Option<GameStateEnum>,
     pub wave: u32,
     pub roto_manager: RotoScriptManager,
     pub error_message: Option<String>,
@@ -94,7 +97,8 @@ impl GameState {
             n_logic_updates: 0,
             enemies: vec![],
             projectiles: vec![],
-            state: GameStateEnum::Playing,
+            state: GameStateEnum::WeaponSelection,
+            next_state: None,
             wave: 0,
             roto_manager,
             error_message: None,
@@ -111,6 +115,7 @@ impl GameState {
 
     pub fn check_collisions(&mut self) {
         // Check player-enemy collisions
+        let mut game_over = false;
         for enemy in &self.enemies {
             let collision_data = check_collision(
                 &self.player.collider(),
@@ -119,9 +124,13 @@ impl GameState {
                 enemy.position(),
             );
             if collision_data.collided {
-                self.state = GameStateEnum::GameOver;
+                game_over = true;
                 self.enemies_to_despawn.insert(enemy.id);
             }
+        }
+
+        if game_over {
+            self.set_next_state(GameStateEnum::GameOver);
         }
 
         // Check projectile-enemy collisions
@@ -209,7 +218,7 @@ impl GameState {
             || self.player.pos.y < 0.0
             || self.player.pos.y > h
         {
-            self.state = GameStateEnum::GameOver;
+            self.set_next_state(GameStateEnum::GameOver);
         }
     }
 
@@ -267,11 +276,11 @@ impl GameState {
     pub fn reload_roto_scripts(&mut self) {
         match self.reload_roto_script_internal() {
             Ok(_) => {
-                self.state = GameStateEnum::Playing;
+                self.set_next_state(GameStateEnum::Playing);
                 self.error_message = None;
             }
             Err(err) => {
-                self.state = GameStateEnum::ScriptError;
+                self.set_next_state(GameStateEnum::ScriptError);
                 self.error_message = Some(err);
             }
         }
@@ -434,6 +443,49 @@ impl GameState {
             .retain(|p| !self.projectiles_to_despawn.contains(&p.id));
         self.enemies_to_despawn.clear();
         self.projectiles_to_despawn.clear();
+    }
+
+    pub fn set_next_state(&mut self, next_state: GameStateEnum) {
+        self.next_state = Some(next_state);
+    }
+
+    pub fn apply_next_state(&mut self) {
+        if let Some(next_state) = self.next_state.take() {
+            // Handle state exit logic
+            match self.state {
+                GameStateEnum::WeaponSelection => {
+                    // Exiting weapon selection - nothing to clean up
+                }
+                GameStateEnum::Playing => {
+                    // Exiting playing state - nothing to clean up
+                }
+                GameStateEnum::GameOver => {
+                    // Exiting game over - nothing to clean up
+                }
+                GameStateEnum::ScriptError => {
+                    // Exiting script error - nothing to clean up
+                }
+            }
+
+            // Handle state entry logic
+            match next_state {
+                GameStateEnum::WeaponSelection => {
+                    // Entering weapon selection - nothing to initialize
+                }
+                GameStateEnum::Playing => {
+                    // Entering playing state - ensure player has a weapon
+                    self.t_prev = get_time();
+                }
+                GameStateEnum::GameOver => {
+                    // Entering game over - nothing to initialize
+                }
+                GameStateEnum::ScriptError => {
+                    // Entering script error - nothing to initialize
+                }
+            }
+
+            self.state = next_state;
+        }
     }
 
     pub fn despawn_projectiles_out_of_bounds(&mut self) {

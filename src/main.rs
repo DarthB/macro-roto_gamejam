@@ -31,6 +31,10 @@ async fn main() {
 
     loop {
         match gs.state {
+            GameStateEnum::WeaponSelection => {
+                gamestate::weapon_selection::process(&mut gs);
+                gamestate::weapon_selection::draw(&gs);
+            }
             GameStateEnum::GameOver => {
                 gamestate::gameover::process(&mut gs);
             }
@@ -44,6 +48,9 @@ async fn main() {
                 gamestate::playing::draw(&gs);
             }
         }
+
+        // Apply any pending state transitions
+        gs.apply_next_state();
 
         next_frame().await
     }
