@@ -12,8 +12,8 @@ on:
         type: string
 
 env:
-  GAME_EXECUTABLE_NAME: Macro_Roto_The_Auto_Battler
-  GAME_OSX_APP_NAME: Macro_Roto_The_Auto_Battler
+  GAME_EXECUTABLE_NAME: macro_roto
+  GAME_OSX_APP_NAME: macro_roto
 
 permissions:
   contents: write
