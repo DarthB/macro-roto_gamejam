@@ -2,6 +2,7 @@ pub mod gameover;
 pub mod playing;
 pub mod script_error;
 pub mod weapon_selection;
+pub mod won;
 
 use macroquad::prelude::*;
 use std::collections::HashSet;
@@ -20,6 +21,7 @@ pub enum GameStateEnum {
     Playing,
     GameOver,
     ScriptError,
+    Won,
 }
 
 pub struct GameState {
@@ -64,6 +66,7 @@ impl GameState {
         let game_constants = roto_manager.get_game_constants().unwrap_or(GameConstants {
             out_of_bounds_margin: 50.0,
             spawn_target_offset: 100.0,
+            max_waves: 30,
         });
 
         let basic_enemy_stats =
@@ -483,6 +486,9 @@ impl GameState {
                 GameStateEnum::ScriptError => {
                     // Exiting script error - nothing to clean up
                 }
+                GameStateEnum::Won => {
+                    // Exiting won screen - nothing to clean up
+                }
             }
 
             // Handle state entry logic
@@ -502,6 +508,12 @@ impl GameState {
                 }
                 GameStateEnum::ScriptError => {
                     // Entering script error - nothing to initialize
+                }
+                GameStateEnum::Won => {
+                    // Entering won screen - reset player for next game
+                    let w = screen_width();
+                    let h = screen_height();
+                    self.player.reset(w / 2.0, h / 2.0);
                 }
             }
 

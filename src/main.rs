@@ -41,6 +41,9 @@ async fn main() {
             GameStateEnum::ScriptError => {
                 gamestate::script_error::process(&mut gs);
             }
+            GameStateEnum::Won => {
+                gamestate::won::process(&mut gs);
+            }
             GameStateEnum::Playing => {
                 gs.process_global_input();
                 gamestate::playing::process(&mut gs);

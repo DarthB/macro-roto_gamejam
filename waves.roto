@@ -11,7 +11,7 @@ fn get_chaser_enemy_stats() -> EntityStats {
 }
 
 fn get_game_constants() -> GameConstants {
-    GameConstants.new(50.0, 50.0)
+    GameConstants.new(50.0, 50.0, 10)
 }
 
 fn get_wave_composition(wave_number: u32) -> WaveComposition {

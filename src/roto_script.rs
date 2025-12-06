@@ -17,6 +17,7 @@ pub struct WaveConfig {
 pub struct GameConstants {
     pub out_of_bounds_margin: f32,
     pub spawn_target_offset: f32,
+    pub max_waves: u32,
 }
 
 pub struct RotoScriptManager {
@@ -49,8 +50,8 @@ impl RotoScriptManager {
             }
 
             impl Val<GameConstants> {
-                fn new(out_of_bounds_margin: f32, spawn_target_offset: f32) -> Val<GameConstants> {
-                    Val(GameConstants { out_of_bounds_margin, spawn_target_offset })
+                fn new(out_of_bounds_margin: f32, spawn_target_offset: f32, max_waves: u32) -> Val<GameConstants> {
+                    Val(GameConstants { out_of_bounds_margin, spawn_target_offset, max_waves })
                 }
             }
 

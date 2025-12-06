@@ -8,6 +8,12 @@ use crate::roto_script::WaveConfig;
 pub fn process(gs: &mut GameState) {
     // Check if we need to spawn a new wave
     if gs.enemies.is_empty() {
+        // Check if player has won (completed final wave)
+        if gs.wave >= gs.game_constants.max_waves {
+            gs.set_next_state(super::GameStateEnum::Won);
+            return;
+        }
+
         let wave = gs.wave;
         match gs.roto_manager.get_wave_config(wave) {
             Ok(config) => {
