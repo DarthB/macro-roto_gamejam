@@ -2,25 +2,44 @@ use macroquad::prelude::*;
 
 use crate::collision::{Collidable, Collider};
 use crate::enemy::EntityStats;
+use crate::projectile::Projectile;
+use crate::weapon::{Weapon, WeaponType};
 
 #[derive(Debug, Clone)]
 pub struct Player {
     pub pos: Vec2,
     pub vel: Vec2,
+    pub facing: Vec2, // Direction player is facing for weapon firing
     stats: EntityStats,
+    weapons: Vec<Weapon>,
 }
 
 impl Player {
     pub fn new(x: f32, y: f32, stats: EntityStats) -> Self {
+        // Randomly select one of the two weapon types at game start
+        let weapon_type = if rand::gen_range(0, 2) == 0 {
+            WeaponType::EnergyBall
+        } else {
+            WeaponType::Pulse
+        };
+
+        let weapon = Weapon::new(weapon_type);
+
         Self {
             pos: Vec2::new(x, y),
             vel: Vec2::ZERO,
+            facing: Vec2::new(1.0, 0.0), // Start facing right
             stats,
+            weapons: vec![weapon],
         }
     }
 
     pub fn override_stats(&mut self, stats: EntityStats) {
         self.stats = stats;
+    }
+
+    pub fn get_weapons(&self) -> &Vec<Weapon> {
+        &self.weapons
     }
 
     pub fn draw(&self) {
@@ -45,15 +64,31 @@ impl Player {
 
         self.vel += acceleration;
 
+        // Update facing direction based on movement
+        if acceleration.length() > 0.0 {
+            self.facing = acceleration.normalize();
+        }
+
         // Clamp velocity to max speed with proper normalization
         self.clamp_velocity();
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self, dt: f32) -> Vec<Projectile> {
         self.pos += self.vel;
 
         // Apply friction
         self.vel *= self.stats.friction;
+
+        // Update weapons and collect projectiles to spawn
+        let mut new_projectiles = Vec::new();
+
+        for weapon in &mut self.weapons {
+            weapon.update(dt);
+            let projectiles = weapon.fire(self.pos, self.facing);
+            new_projectiles.extend(projectiles);
+        }
+
+        new_projectiles
     }
 
     fn clamp_velocity(&mut self) {

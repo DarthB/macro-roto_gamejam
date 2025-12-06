@@ -3,11 +3,14 @@ use macroquad::prelude::*;
 mod collision;
 mod enemy;
 mod player;
+mod projectile;
 mod roto_script;
+mod weapon;
 
 use collision::{Collidable, check_collision};
 use enemy::{Enemy, EnemyType};
 use player::Player;
+use projectile::Projectile;
 use roto_script::{RotoScriptManager, WaveConfig};
 
 const DT: f64 = 1.0 / 30.0;
@@ -26,6 +29,7 @@ struct GameState {
     t_passed: f64,
     n_logic_updates: u32,
     enemies: Vec<Enemy>,
+    projectiles: Vec<Projectile>,
     state: GameStateEnum,
     wave: u32,
     roto_manager: RotoScriptManager,
@@ -54,6 +58,7 @@ impl GameState {
             t_passed: 0.0,
             n_logic_updates: 0,
             enemies: vec![],
+            projectiles: vec![],
             state: GameStateEnum::Playing,
             wave: 0,
             roto_manager,
@@ -92,6 +97,9 @@ impl GameState {
         for &i in enemies_collided_with_player.iter().rev() {
             self.despawn_enemy(i);
         }
+
+        // Check projectile-enemy collisions
+        self.check_projectile_enemy_collisions();
 
         // Check enemy-enemy collisions with elastic bounce
         self.check_enemy_collisions();
@@ -137,6 +145,51 @@ impl GameState {
                     }
                 }
             }
+        }
+    }
+
+    fn check_projectile_enemy_collisions(&mut self) {
+        let mut enemies_to_remove = Vec::new();
+        let mut projectiles_to_remove = Vec::new();
+
+        for (proj_idx, projectile) in self.projectiles.iter().enumerate() {
+            for (enemy_idx, enemy) in self.enemies.iter().enumerate() {
+                let collision_data = check_collision(
+                    &projectile.collider(),
+                    projectile.position(),
+                    &enemy.collider(),
+                    enemy.position(),
+                );
+
+                if collision_data.collided {
+                    enemies_to_remove.push(enemy_idx);
+                    // Energy balls get removed on hit, pulses stay
+                    match projectile.projectile_type {
+                        projectile::ProjectileType::EnergyBall => {
+                            projectiles_to_remove.push(proj_idx);
+                        }
+                        projectile::ProjectileType::Pulse => {
+                            // Pulse continues to exist and can hit multiple enemies
+                        }
+                    }
+                }
+            }
+        }
+
+        // Remove duplicates and sort in reverse order for safe removal
+        enemies_to_remove.sort_unstable();
+        enemies_to_remove.dedup();
+        projectiles_to_remove.sort_unstable();
+        projectiles_to_remove.dedup();
+
+        // Remove enemies (in reverse order)
+        for &idx in enemies_to_remove.iter().rev() {
+            self.despawn_enemy(idx);
+        }
+
+        // Remove projectiles (in reverse order)
+        for &idx in projectiles_to_remove.iter().rev() {
+            self.projectiles.remove(idx);
         }
     }
 
@@ -336,11 +389,27 @@ fn global_input(gs: &mut GameState) {
 }
 
 fn update(gs: &mut GameState) {
-    gs.player.update();
+    let dt = DT as f32;
+
+    // Update player and get new projectiles from weapon firing
+    let new_projectiles = gs.player.update(dt);
+    gs.projectiles.extend(new_projectiles);
+
     let player_pos = gs.player.pos;
     for enemy in gs.enemies.iter_mut() {
         enemy.update(Some(player_pos));
     }
+
+    // Update projectiles
+    for projectile in gs.projectiles.iter_mut() {
+        projectile.update(dt);
+    }
+
+    // Remove expired projectiles
+    gs.projectiles.retain(|projectile| !projectile.is_expired());
+
+    // Remove out-of-bounds projectiles
+    gs.despawn_projectiles_out_of_bounds();
 
     // this may trigger game over
     gs.check_collisions();
@@ -349,10 +418,38 @@ fn update(gs: &mut GameState) {
     gs.despawn_enemies_out_of_bounds();
 }
 
+impl GameState {
+    fn despawn_projectiles_out_of_bounds(&mut self) {
+        let margin = self
+            .roto_manager
+            .get_game_constants()
+            .map(|c| c.out_of_bounds_margin)
+            .unwrap_or(50.0);
+
+        let w = screen_width();
+        let h = screen_height();
+        self.projectiles.retain(|projectile| {
+            // Only remove energy balls that go out of bounds, keep pulses
+            match projectile.projectile_type {
+                projectile::ProjectileType::EnergyBall => {
+                    projectile.pos.x >= -margin
+                        && projectile.pos.x <= w + margin
+                        && projectile.pos.y >= -margin
+                        && projectile.pos.y <= h + margin
+                }
+                projectile::ProjectileType::Pulse => true, // Pulses stay centered on player
+            }
+        });
+    }
+}
+
 fn draw(gs: &GameState) {
     gs.player.draw();
     for enemy in gs.enemies.iter() {
         enemy.draw();
+    }
+    for projectile in gs.projectiles.iter() {
+        projectile.draw();
     }
     draw_text(
         "Move the Player with arrow keys",
@@ -362,7 +459,7 @@ fn draw(gs: &GameState) {
         DARKGRAY,
     );
     draw_text(
-        "Avoid the Red Enemies! Don't leave the screen or you die!",
+        "Auto-battler: Weapons fire automatically! Avoid the enemies. Don't leave the Screen!",
         20.0,
         40.0,
         20.0,
@@ -372,6 +469,12 @@ fn draw(gs: &GameState) {
     draw_text("Press 'P' to pause", 20.0, 80.0, 20.0, DARKGRAY);
     let wave_text = format!("Wave: {}", gs.wave);
     draw_text(&wave_text, screen_width() - 120.0, 20.0, 20.0, DARKGRAY);
+
+    // Show current weapon info
+    if let Some(weapon) = gs.player.get_weapons().first() {
+        let weapon_text = format!("Weapon: {:?} Lvl{}", weapon.weapon_type, weapon.get_level());
+        draw_text(&weapon_text, screen_width() - 200.0, 40.0, 16.0, DARKGRAY);
+    }
 
     if gs.paused {
         draw_text(
