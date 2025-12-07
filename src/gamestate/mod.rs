@@ -45,6 +45,7 @@ pub struct GameState {
     pub next_entity_id: EntityId,
     pub enemies_to_despawn: HashSet<EntityId>,
     pub projectiles_to_despawn: HashSet<EntityId>,
+    pub message_from_elf: Option<String>,
 }
 
 impl GameState {
@@ -92,6 +93,14 @@ impl GameState {
         let mut player = Player::new(screen_width() / 2.0, screen_height() / 2.0, player_stats);
         player.override_visual_config(visual_config.player);
 
+        let tmp = r##"
+Christmas is up ahead and the evil forces are rising!. 
+It's up to us elves to stop them and save xmas!.-.
+Ohh no, we only have some seconds to prepare!.-.
+Quick focus, YOU move and steer the body!.
+I will summon magic to to beat the evil!.
+"##;
+
         Self {
             player,
             t_frame: get_time(),
@@ -113,6 +122,7 @@ impl GameState {
             next_entity_id: 0,
             enemies_to_despawn: HashSet::new(),
             projectiles_to_despawn: HashSet::new(),
+            message_from_elf: Some(tmp.to_owned()),
         }
     }
 

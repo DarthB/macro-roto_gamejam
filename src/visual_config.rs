@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use macroquad::prelude::*;
 
 use crate::projectile::ProjectileType;
@@ -163,7 +165,7 @@ impl BlendConfig {
 }
 
 /// Complete visual configuration for the game
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct GameVisualConfig {
     pub player: PlayerVisualConfig,
     pub basic_enemy: EnemyVisualConfig,
@@ -172,6 +174,7 @@ pub struct GameVisualConfig {
     pub pulse: ProjectileVisualConfig,
     pub homing_missile: ProjectileVisualConfig,
     pub pulse_blend: BlendConfig,
+    pub char_tex: Option<Rc<Texture2D>>,
 }
 
 impl GameVisualConfig {
@@ -184,6 +187,7 @@ impl GameVisualConfig {
             pulse: ProjectileVisualConfig::from(ProjectileType::Pulse),
             homing_missile: ProjectileVisualConfig::from(ProjectileType::HomingMissile),
             pulse_blend: BlendConfig::pulse_default(),
+            char_tex: None,
         }
     }
 }

@@ -1,3 +1,5 @@
+use std::rc::Rc;
+
 use macroquad::prelude::*;
 
 mod collision;
@@ -39,6 +41,8 @@ async fn main() {
     }
 
     let mut gs = GameState::new();
+
+    gs.visual_config.char_tex = Some(Rc::new(load_texture("assets/elf_char.png").await.unwrap()));
 
     loop {
         match gs.state {

@@ -44,16 +44,40 @@ fn handle_weapon_selection(gs: &mut GameState, weapon_type: WeaponType) {
 pub fn draw(gs: &GameState) {
     // Draw the playing state underneath (frozen)
     clear_background(BLACK);
-    crate::gamestate::playing::draw(gs);
 
-    // Draw semi-transparent overlay
-    draw_rectangle(
-        0.0,
-        0.0,
-        screen_width(),
-        screen_height(),
-        Color::new(0.0, 0.0, 0.0, 0.7),
-    );
+    if let Some(msg) = &gs.message_from_elf {
+        let texture = &gs.visual_config.char_tex.as_ref().unwrap();
+        
+        let mut params = DrawTextureParams::default();
+        let (w, h, s) = (texture.width(), texture.height(), 0.33);
+        let x = 0.;
+        let y = 0.;
+        params.dest_size = Some(Vec2::new(w * s, h * s));
+
+        draw_texture_ex(texture, x, y, WHITE, params);
+
+        let x = 300.;
+        let y = 60.;
+        draw_text("The Guardian:", x, y, 32., YELLOW);
+
+        let y = 100.;
+        msg.split('.').filter(|sentence| {
+            !sentence.is_empty()
+        }).enumerate().for_each(|(i, sentence)| {
+            let line = sentence.trim();
+            draw_text(line, x, y + i as f32 * 22., 20., WHITE);
+        });
+    } else {
+        crate::gamestate::playing::draw(gs);
+        // Draw semi-transparent overlay
+        draw_rectangle(
+            0.0,
+            0.0,
+            screen_width(),
+            screen_height(),
+            Color::new(0.0, 0.0, 0.0, 0.7),
+        );
+    }
 
     let context = if gs.player.get_weapons().is_empty() {
         WeaponSelectionContext::InitialSelection
@@ -69,13 +93,13 @@ pub fn draw(gs: &GameState) {
 
 fn draw_initial_selection() {
     // Draw title
-    let title = "SELECT YOUR WEAPON";
+    let title = "SELECT OUR MAGIC";
     let title_size = 40.0;
     let title_width = measure_text(title, None, title_size as u16, 1.0).width;
     draw_text(
         title,
         screen_width() / 2.0 - title_width / 2.0,
-        80.0,
+        450.0,
         title_size,
         YELLOW,
     );
@@ -86,7 +110,7 @@ fn draw_initial_selection() {
     let card_spacing = 40.0;
     let total_width = card_width * 3.0 + card_spacing * 2.0;
     let start_x = (screen_width() - total_width) / 2.0;
-    let card_y = 140.0;
+    let card_y = 480.0;
 
     // Energy Ball Card (1)
     let energy_ball_stats = WeaponStats::from(WeaponType::EnergyBall);

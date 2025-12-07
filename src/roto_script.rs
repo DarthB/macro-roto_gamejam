@@ -35,7 +35,7 @@ impl RotoScriptManager {
             #[copy] type EnemyVisualConfig = Val<EnemyVisualConfig>;
             #[copy] type ProjectileVisualConfig = Val<ProjectileVisualConfig>;
             #[copy] type BlendConfig = Val<BlendConfig>;
-            #[copy] type GameVisualConfig = Val<GameVisualConfig>;
+            #[clone] type GameVisualConfig = Val<GameVisualConfig>;
 
             impl Val<EntityStats> {
                 fn new(radius: f32, max_speed: f32, acceleration: f32, friction: f32) -> Val<EntityStats> {
@@ -111,6 +111,7 @@ impl RotoScriptManager {
                         pulse: pulse.0,
                         homing_missile: homing_missile.0,
                         pulse_blend: pulse_blend.0,
+                        char_tex: None,
                     })
                 }
             }
