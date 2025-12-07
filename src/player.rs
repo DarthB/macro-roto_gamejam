@@ -49,7 +49,7 @@ impl Player {
         } else {
             let mut total = 0;
             for i in 1..=level {
-                total += 5 * i;
+                total += 9 * i;
             }
             total
         }
@@ -59,15 +59,16 @@ impl Player {
         Self::xp_for_level(self.level + 1)
     }
 
-    pub fn add_xp(&mut self, xp: u32) -> bool {
+    pub fn add_xp(&mut self, xp: u32) -> u32 {
+        let mut num_levelups = 0u32;
         self.xp += xp;
 
         // Check if we leveled up
-        if self.xp >= self.xp_for_next_level() {
+        while self.xp >= self.xp_for_next_level() {
             self.level += 1;
-            return true; // Level up occurred
+            num_levelups += 1;
         }
-        false
+        num_levelups
     }
 
     pub fn get_level(&self) -> u32 {

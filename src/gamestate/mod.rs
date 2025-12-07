@@ -47,6 +47,7 @@ pub struct GameState {
     pub projectiles_to_despawn: HashSet<EntityId>,
     pub message_from_elf: Option<String>,
     pub assets: Assets,
+    pub num_lvlups: u32,
 }
 
 impl GameState {
@@ -125,10 +126,11 @@ I will summon magic to to beat the evil!.
             projectiles_to_despawn: HashSet::new(),
             message_from_elf: Some(tmp.to_owned()),
             assets,
+            num_lvlups: 1,
         }
     }
 
-    pub fn check_collisions(&mut self) {
+    pub fn check_collisions(&mut self) -> u32 {
         // Check player-enemy collisions
         let mut game_over = false;
         for enemy in &self.enemies {
@@ -148,11 +150,11 @@ I will summon magic to to beat the evil!.
             self.set_next_state(GameStateEnum::GameOver);
         }
 
-        // Check projectile-enemy collisions
-        self.check_projectile_enemy_collisions();
-
         // Check enemy-enemy collisions with elastic bounce
         self.check_enemy_collisions();
+
+        // Check projectile-enemy collisions
+        self.check_projectile_enemy_collisions()
     }
 
     fn check_enemy_collisions(&mut self) {
@@ -198,7 +200,8 @@ I will summon magic to to beat the evil!.
         }
     }
 
-    fn check_projectile_enemy_collisions(&mut self) {
+    fn check_projectile_enemy_collisions(&mut self) -> u32 {
+        let mut killed_enemies = 0;
         for projectile in &self.projectiles {
             for enemy in &self.enemies {
                 let collision_data = check_collision(
@@ -209,7 +212,10 @@ I will summon magic to to beat the evil!.
                 );
 
                 if collision_data.collided {
+                    killed_enemies += 1;
                     self.enemies_to_despawn.insert(enemy.id);
+                    // we killed it by ourselves, one more xp:
+
                     // Energy balls get removed on hit, pulses stay
                     match projectile.projectile_type {
                         ProjectileType::EnergyBall | ProjectileType::HomingMissile => {
@@ -222,6 +228,7 @@ I will summon magic to to beat the evil!.
                 }
             }
         }
+        killed_enemies
     }
 
     pub fn check_player_bounds(&mut self) {
@@ -285,6 +292,13 @@ I will summon magic to to beat the evil!.
         // Toggle pause on 'P' key
         if is_key_pressed(KeyCode::P) {
             self.paused = !self.paused;
+        }
+
+        if is_key_pressed(KeyCode::X) {
+            self.num_lvlups = self.player.add_xp(100);
+            if self.num_lvlups > 0 {
+                self.set_next_state(GameStateEnum::WeaponSelection);
+            }
         }
     }
 
@@ -458,17 +472,7 @@ I will summon magic to to beat the evil!.
     }
 
     pub fn process_despawns(&mut self) {
-        // Award XP for each enemy killed
-        let enemies_killed = self.enemies_to_despawn.len() as u32;
-        if enemies_killed > 0 {
-            // Award 1 XP per enemy killed
-            let leveled_up = self.player.add_xp(enemies_killed);
-
-            // If player leveled up, transition to weapon selection
-            if leveled_up {
-                self.set_next_state(GameStateEnum::WeaponSelection);
-            }
-        }
+        self.enemies_to_despawn.len() as u32;
 
         self.enemies
             .retain(|e| !self.enemies_to_despawn.contains(&e.id));

@@ -15,7 +15,7 @@ fn get_chaser_enemy_stats() -> EntityStats {
 
 fn get_game_constants() -> GameConstants {
     # out of bounds margin, spawn target offset, goal wave
-    GameConstants.new(50.0, 50.0, 1)
+    GameConstants.new(50.0, 50.0, 10)
 }
 
 fn get_wave_composition(wave_number: u32) -> WaveComposition {

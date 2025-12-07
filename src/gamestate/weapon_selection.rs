@@ -22,6 +22,10 @@ pub fn process(gs: &mut GameState) {
     } else if is_key_pressed(KeyCode::Key3) {
         handle_weapon_selection(gs, WeaponType::HomingMissile);
     }
+
+    if gs.num_lvlups == 0 {
+        gs.set_next_state(super::GameStateEnum::Playing);
+    }
 }
 
 fn handle_weapon_selection(gs: &mut GameState, weapon_type: WeaponType) {
@@ -31,14 +35,14 @@ fn handle_weapon_selection(gs: &mut GameState, weapon_type: WeaponType) {
     if let Some(index) = weapons.iter().position(|w| w.weapon_type == weapon_type) {
         // Player has this weapon - upgrade it
         gs.player.level_up_weapon(index);
-        gs.set_next_state(super::GameStateEnum::Playing);
     } else {
         // Player doesn't have this weapon - add it (if room available)
         if weapons.len() < 3 {
             gs.player.add_weapon(weapon_type);
-            gs.set_next_state(super::GameStateEnum::Playing);
         }
     }
+
+    gs.num_lvlups -= 1;
 }
 
 pub fn draw(gs: &GameState) {
@@ -70,9 +74,10 @@ pub fn draw(gs: &GameState) {
 
 fn draw_weapon_selection(gs: &GameState, context: WeaponSelectionContext) {
     // Draw title
+    let lvl_str = format!("{} LEVEL UP(s) - SELECT OUR MAGIC!", gs.num_lvlups);
     let title = match context {
         WeaponSelectionContext::InitialSelection => "SELECT OUR MAGIC!",
-        WeaponSelectionContext::LevelUp => "LEVEL UP - SELECT OUR MAGIC!",
+        WeaponSelectionContext::LevelUp => lvl_str.as_str(),
     };
     let title_size = 40.0;
     let title_width = measure_text(title, None, title_size as u16, 1.0).width;

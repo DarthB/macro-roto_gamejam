@@ -3,6 +3,7 @@ use macroquad::prelude::*;
 use super::GameState;
 use crate::DT;
 use crate::enemy::EnemyType;
+use crate::gamestate::GameStateEnum;
 use crate::roto_script::WaveConfig;
 
 pub fn process(gs: &mut GameState) {
@@ -72,8 +73,19 @@ pub fn update_logic(gs: &mut GameState) {
     gs.despawn_enemies_out_of_bounds();
 
     // This may trigger game over
-    gs.check_collisions();
+    let num_kills = gs.check_collisions();
     gs.check_player_bounds();
+
+    // leveling:
+    let enemies_died = gs.enemies_to_despawn.len() as u32;
+    // Award 1 XP per enemy killed
+    let leveled_up = gs.player.add_xp(enemies_died + num_kills);
+    gs.num_lvlups = leveled_up;
+
+    // If player leveled up, transition to weapon selection
+    if leveled_up > 0 {
+        gs.set_next_state(GameStateEnum::WeaponSelection);
+    }
 
     // Process all despawns at the end
     gs.process_despawns();
