@@ -45,30 +45,9 @@ pub fn draw(gs: &GameState) {
     // Draw the playing state underneath (frozen)
     clear_background(BLACK);
 
-    if let Some(msg) = &gs.message_from_elf {
-        let texture = &gs.visual_config.char_tex.as_ref().unwrap();
+    let has_been_drawn = super::draw_elf_message(gs);
 
-        let mut params = DrawTextureParams::default();
-        let (w, h, s) = (texture.width(), texture.height(), 0.33);
-        let x = 0.;
-        let y = 0.;
-        params.dest_size = Some(Vec2::new(w * s, h * s));
-
-        draw_texture_ex(texture, x, y, WHITE, params);
-
-        let x = 300.;
-        let y = 60.;
-        draw_text("The Guardian:", x, y, 32., YELLOW);
-
-        let y = 100.;
-        msg.split('.')
-            .filter(|sentence| !sentence.is_empty())
-            .enumerate()
-            .for_each(|(i, sentence)| {
-                let line = sentence.trim();
-                draw_text(line, x, y + i as f32 * 22., 20., WHITE);
-            });
-    } else {
+    if !has_been_drawn {
         crate::gamestate::playing::draw(gs);
         // Draw semi-transparent overlay
         draw_rectangle(

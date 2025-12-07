@@ -502,10 +502,11 @@ I told you did I?
                         }
                         GameStateEnum::GameOver => {
                             let tmp = r##"
-Ohh no! We lost, you wanna cheat to win?.-.
-Just change the `main<dot>roto` - you can.
-change the wave composition or even.
-reduce the number of waves.
+Ohh no! We lost, want an easier experience?.-.
+Just change the `scripts/main,roto`!.-.
+YOU can change the wave composition or even.
+reduce the number of waves.-.
+Just save the file and Press Return here!
 "##;
                             tmp
                         }
@@ -514,8 +515,9 @@ reduce the number of waves.
 We did it! Why that sad face?.-.
 The evil forces won't affect xmas!.-.
 Okay too easy!? My suggestions:.
-1- Change Number of waves in main<dot>roto
-2- Don't use the weapon you think is best.
+1: Change Number of waves in scripts/main,roto.
+2: Don't use the weapon you think is best.-.-
+Just save the file and Press Return here!
 "##;
                             tmp
                         }
@@ -582,5 +584,35 @@ Okay too easy!? My suggestions:.
                 }
             }
         }
+    }
+}
+
+pub fn draw_elf_message(gs: &GameState) -> bool {
+    if let Some(msg) = &gs.message_from_elf {
+        let texture = &gs.visual_config.char_tex.as_ref().unwrap();
+
+        let mut params = DrawTextureParams::default();
+        let (w, h, s) = (texture.width(), texture.height(), 0.33);
+        let x = 0.;
+        let y = 0.;
+        params.dest_size = Some(Vec2::new(w * s, h * s));
+
+        draw_texture_ex(texture, x, y, WHITE, params);
+
+        let x = 300.;
+        let y = 60.;
+        draw_text("The Guardian:", x, y, 32., YELLOW);
+
+        let y = 100.;
+        msg.split('.')
+            .filter(|sentence| !sentence.is_empty())
+            .enumerate()
+            .for_each(|(i, sentence)| {
+                let line = sentence.trim();
+                draw_text(line, x, y + i as f32 * 22., 20., WHITE);
+            });
+        true
+    } else {
+        false
     }
 }
