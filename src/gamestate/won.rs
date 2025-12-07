@@ -5,11 +5,13 @@ use super::GameState;
 pub fn process(gs: &mut GameState) {
     clear_background(BLACK);
 
+    super::draw_elf_message(gs);
+
     // Draw victory message
     draw_text(
         "VICTORY!",
         screen_width() / 2.0 - 100.0,
-        screen_height() / 2.0 - 80.0,
+        screen_height() / 2.0 + 80.0,
         60.0,
         GOLD,
     );
@@ -20,7 +22,7 @@ pub fn process(gs: &mut GameState) {
     draw_text(
         &congrats_text,
         screen_width() / 2.0 - congrats_width / 2.0,
-        screen_height() / 2.0 - 20.0,
+        screen_height() / 2.0 + 140.0,
         24.0,
         YELLOW,
     );
@@ -30,7 +32,7 @@ pub fn process(gs: &mut GameState) {
     draw_text(
         &level_text,
         screen_width() / 2.0 - 80.0,
-        screen_height() / 2.0 + 30.0,
+        screen_height() / 2.0 + 170.0,
         20.0,
         LIGHTGRAY,
     );
@@ -39,7 +41,7 @@ pub fn process(gs: &mut GameState) {
     draw_text(
         &xp_text,
         screen_width() / 2.0 - 70.0,
-        screen_height() / 2.0 + 60.0,
+        screen_height() / 2.0 + 200.0,
         20.0,
         LIGHTGRAY,
     );
@@ -50,7 +52,7 @@ pub fn process(gs: &mut GameState) {
         draw_text(
             "Weapons:",
             screen_width() / 2.0 - 50.0,
-            screen_height() / 2.0 + 100.0,
+            screen_height() / 2.0 + 240.0,
             18.0,
             LIGHTGRAY,
         );
@@ -60,7 +62,7 @@ pub fn process(gs: &mut GameState) {
             draw_text(
                 &weapon_text,
                 screen_width() / 2.0 - 60.0,
-                screen_height() / 2.0 + 125.0 + (i as f32 * 22.0),
+                screen_height() / 2.0 + 265.0 + (i as f32 * 22.0),
                 16.0,
                 GRAY,
             );
@@ -71,7 +73,7 @@ pub fn process(gs: &mut GameState) {
     draw_text(
         "Press Return to Play Again",
         screen_width() / 2.0 - 140.0,
-        screen_height() / 2.0 + 200.0,
+        screen_height() / 2.0 + 340.0,
         22.0,
         WHITE,
     );
