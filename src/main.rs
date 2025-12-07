@@ -14,6 +14,8 @@ mod weapon;
 
 use gamestate::{GameState, GameStateEnum};
 
+use crate::visual_config::Assets;
+
 pub const DT: f64 = 1.0 / 30.0;
 
 fn window_conf() -> Conf {
@@ -40,9 +42,9 @@ async fn main() {
         }
     }
 
-    let mut gs = GameState::new();
-
-    gs.visual_config.char_tex = Some(Rc::new(load_texture("assets/elf_char.png").await.unwrap()));
+    let mut gs = GameState::new(Assets {
+        char_tex: Some(load_texture("assets/elf_char.png").await.unwrap()),
+    });
 
     loop {
         match gs.state {

@@ -22,6 +22,6 @@ pub fn process(gs: &mut GameState) {
         DARKGRAY,
     );
     if is_key_pressed(KeyCode::Enter) {
-        *gs = GameState::new();
+        *gs = GameState::new(gs.assets.clone());
     }
 }

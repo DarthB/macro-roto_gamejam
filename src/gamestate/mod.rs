@@ -13,7 +13,7 @@ use crate::entity::{EntityId, EntityStats, SpawnCommand};
 use crate::player::Player;
 use crate::projectile::{Projectile, ProjectileStats, ProjectileType};
 use crate::roto_script::{GameConstants, RotoScriptManager};
-use crate::visual_config::GameVisualConfig;
+use crate::visual_config::{Assets, GameVisualConfig};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum GameStateEnum {
@@ -46,10 +46,11 @@ pub struct GameState {
     pub enemies_to_despawn: HashSet<EntityId>,
     pub projectiles_to_despawn: HashSet<EntityId>,
     pub message_from_elf: Option<String>,
+    pub assets: Assets,
 }
 
 impl GameState {
-    pub fn new() -> Self {
+    pub fn new(assets: Assets) -> Self {
         let mut roto_manager = RotoScriptManager::new();
 
         // Try to fetch player stats from Roto, fallback to defaults if it fails
@@ -123,6 +124,7 @@ I will summon magic to to beat the evil!.
             enemies_to_despawn: HashSet::new(),
             projectiles_to_despawn: HashSet::new(),
             message_from_elf: Some(tmp.to_owned()),
+            assets,
         }
     }
 
@@ -589,7 +591,7 @@ Just save the file and Press Return here!
 
 pub fn draw_elf_message(gs: &GameState) -> bool {
     if let Some(msg) = &gs.message_from_elf {
-        let texture = &gs.visual_config.char_tex.as_ref().unwrap();
+        let texture = &gs.assets.char_tex.as_ref().unwrap();
 
         let mut params = DrawTextureParams::default();
         let (w, h, s) = (texture.width(), texture.height(), 0.33);

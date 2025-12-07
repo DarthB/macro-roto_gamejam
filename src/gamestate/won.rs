@@ -80,6 +80,7 @@ pub fn process(gs: &mut GameState) {
 
     // Handle restart
     if is_key_pressed(KeyCode::Enter) {
-        *gs = GameState::new();
+        let assets = gs.assets.clone();
+        *gs = GameState::new(assets);
     }
 }

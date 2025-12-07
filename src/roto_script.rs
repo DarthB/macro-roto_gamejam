@@ -111,7 +111,6 @@ impl RotoScriptManager {
                         pulse: pulse.0,
                         homing_missile: homing_missile.0,
                         pulse_blend: pulse_blend.0,
-                        char_tex: None,
                     })
                 }
             }
