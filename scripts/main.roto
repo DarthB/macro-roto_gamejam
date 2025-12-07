@@ -1,17 +1,21 @@
 fn get_player_stats() -> EntityStats {
+    # radius, vmax, acceleration, friction
     EntityStats.new(20.0, 7.5, 1.0, 0.9)
 }
 
 fn get_basic_enemy_stats() -> EntityStats {
+    # radius, vmax, acceleration, friction
     EntityStats.new(15.0, 3.0, 0.15, 0.0)
 }
 
 fn get_chaser_enemy_stats() -> EntityStats {
+    # radius, vmax, acceleration, friction
     EntityStats.new(12.0, 4.5, 0.25, 0.0)
 }
 
 fn get_game_constants() -> GameConstants {
-    GameConstants.new(50.0, 50.0, 10)
+    # out of bounds margin, spawn target offset, goal wave
+    GameConstants.new(50.0, 50.0, 1)
 }
 
 fn get_wave_composition(wave_number: u32) -> WaveComposition {

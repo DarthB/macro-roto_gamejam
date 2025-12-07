@@ -94,7 +94,7 @@ impl GameState {
         player.override_visual_config(visual_config.player);
 
         let tmp = r##"
-Christmas is up ahead and the evil forces are rising!. 
+Christmas is up ahead and the evil forces are rising!.
 It's up to us elves to stop them and save xmas!.-.
 Ohh no, we only have some seconds to prepare!.-.
 Quick focus, YOU move and steer the body!.
@@ -485,10 +485,44 @@ I will summon magic to to beat the evil!.
             // Handle state exit logic
             match self.state {
                 GameStateEnum::WeaponSelection => {
-                    // Exiting weapon selection - nothing to clean up
+                    // Exiting weapon selection
+                    self.message_from_elf = None;
                 }
                 GameStateEnum::Playing => {
-                    // Exiting playing state - nothing to clean up
+                    // Exiting playing state
+                    let tmp = match next_state {
+                        GameStateEnum::WeaponSelection => {
+                            let tmp = r##"
+Good my apprentice, we raise in power!.-.
+Hear me: We get more xp if we kill them.
+than if they die by leaving our sphere.-.
+I told you did I?
+"##;
+                            tmp
+                        }
+                        GameStateEnum::GameOver => {
+                            let tmp = r##"
+Ohh no! We lost, you wanna cheat to win?.-.
+Just change the `main<dot>roto` - you can.
+change the wave composition or even.
+reduce the number of waves.
+"##;
+                            tmp
+                        }
+                        GameStateEnum::Won => {
+                            let tmp = r##"
+We did it! Why that sad face?.-.
+The evil forces won't affect xmas!.-.
+Okay too easy!? My suggestions:.
+1- Change Number of waves in main<dot>roto
+2- Don't use the weapon you think is best.
+"##;
+                            tmp
+                        }
+                        _ => unreachable!("this should not happpen"),
+                    };
+
+                    self.message_from_elf = Some(tmp.to_owned());
                 }
                 GameStateEnum::GameOver => {
                     // Exiting game over - nothing to clean up
@@ -497,7 +531,8 @@ I will summon magic to to beat the evil!.
                     // Exiting script error - nothing to clean up
                 }
                 GameStateEnum::Won => {
-                    // Exiting won screen - nothing to clean up
+                    // Exiting won screen
+                    self.message_from_elf = None;
                 }
             }
 

@@ -47,7 +47,7 @@ pub fn draw(gs: &GameState) {
 
     if let Some(msg) = &gs.message_from_elf {
         let texture = &gs.visual_config.char_tex.as_ref().unwrap();
-        
+
         let mut params = DrawTextureParams::default();
         let (w, h, s) = (texture.width(), texture.height(), 0.33);
         let x = 0.;
@@ -61,12 +61,13 @@ pub fn draw(gs: &GameState) {
         draw_text("The Guardian:", x, y, 32., YELLOW);
 
         let y = 100.;
-        msg.split('.').filter(|sentence| {
-            !sentence.is_empty()
-        }).enumerate().for_each(|(i, sentence)| {
-            let line = sentence.trim();
-            draw_text(line, x, y + i as f32 * 22., 20., WHITE);
-        });
+        msg.split('.')
+            .filter(|sentence| !sentence.is_empty())
+            .enumerate()
+            .for_each(|(i, sentence)| {
+                let line = sentence.trim();
+                draw_text(line, x, y + i as f32 * 22., 20., WHITE);
+            });
     } else {
         crate::gamestate::playing::draw(gs);
         // Draw semi-transparent overlay
@@ -85,15 +86,15 @@ pub fn draw(gs: &GameState) {
         WeaponSelectionContext::LevelUp
     };
 
-    match context {
-        WeaponSelectionContext::InitialSelection => draw_initial_selection(),
-        WeaponSelectionContext::LevelUp => draw_level_up_selection(gs),
-    }
+    draw_weapon_selection(gs, context);
 }
 
-fn draw_initial_selection() {
+fn draw_weapon_selection(gs: &GameState, context: WeaponSelectionContext) {
     // Draw title
-    let title = "SELECT OUR MAGIC";
+    let title = match context {
+        WeaponSelectionContext::InitialSelection => "SELECT OUR MAGIC!",
+        WeaponSelectionContext::LevelUp => "LEVEL UP - SELECT OUR MAGIC!",
+    };
     let title_size = 40.0;
     let title_width = measure_text(title, None, title_size as u16, 1.0).width;
     draw_text(
@@ -108,116 +109,17 @@ fn draw_initial_selection() {
     let card_width = 200.0;
     let card_height = 280.0;
     let card_spacing = 40.0;
+    let card_y = 480.0;
     let total_width = card_width * 3.0 + card_spacing * 2.0;
     let start_x = (screen_width() - total_width) / 2.0;
-    let card_y = 480.0;
 
-    // Energy Ball Card (1)
-    let energy_ball_stats = WeaponStats::from(WeaponType::EnergyBall);
-    let energy_ball_desc = generate_weapon_description(
-        WeaponType::EnergyBall,
-        &energy_ball_stats,
-        "Fast projectile that\ntravels straight. You AIM!",
-    );
-    draw_weapon_card(
-        start_x,
-        card_y,
-        card_width,
-        card_height,
-        "1",
-        "Energy Ball",
-        &energy_ball_desc,
-        BLUE,
-    );
-
-    // Pulse Card (2)
-    let pulse_stats = WeaponStats::from(WeaponType::Pulse);
-    let pulse_desc = generate_weapon_description(
-        WeaponType::Pulse,
-        &pulse_stats,
-        "Area attack that\nexpands from player.",
-    );
-    draw_weapon_card(
-        start_x + card_width + card_spacing,
-        card_y,
-        card_width,
-        card_height,
-        "2",
-        "Pulse",
-        &pulse_desc,
-        GREEN,
-    );
-
-    // Homing Missile Card (3)
-    let homing_stats = WeaponStats::from(WeaponType::HomingMissile);
-    let homing_desc = generate_weapon_description(
-        WeaponType::HomingMissile,
-        &homing_stats,
-        "Seeks nearest enemy\nand follows them.",
-    );
-    draw_weapon_card(
-        start_x + (card_width + card_spacing) * 2.0,
-        card_y,
-        card_width,
-        card_height,
-        "3",
-        "Homing Missile",
-        &homing_desc,
-        RED,
-    );
-
-    // Draw instruction
-    let instruction = "Press 1, 2, or 3 to select";
-    let instruction_size = 24.0;
-    let instruction_width = measure_text(instruction, None, instruction_size as u16, 1.0).width;
-    draw_text(
-        instruction,
-        screen_width() / 2.0 - instruction_width / 2.0,
-        card_y + card_height + 60.0,
-        instruction_size,
-        LIGHTGRAY,
-    );
-}
-
-fn draw_level_up_selection(gs: &GameState) {
-    // Draw title
-    let title = "LEVEL UP!";
-    let title_size = 50.0;
-    let title_width = measure_text(title, None, title_size as u16, 1.0).width;
-    draw_text(
-        title,
-        screen_width() / 2.0 - title_width / 2.0,
-        60.0,
-        title_size,
-        YELLOW,
-    );
-
-    let subtitle = format!("Level {} - Choose an Upgrade", gs.player.get_level());
-    let subtitle_size = 24.0;
-    let subtitle_width = measure_text(&subtitle, None, subtitle_size as u16, 1.0).width;
-    draw_text(
-        &subtitle,
-        screen_width() / 2.0 - subtitle_width / 2.0,
-        100.0,
-        subtitle_size,
-        LIGHTGRAY,
-    );
-
-    let weapons = gs.player.get_weapons();
-
-    // Always show all three weapon types in the same order
     let all_weapon_types = [
         WeaponType::EnergyBall,
         WeaponType::Pulse,
         WeaponType::HomingMissile,
     ];
 
-    let card_width = 180.0;
-    let card_height = 260.0;
-    let card_spacing = 30.0;
-    let total_width = card_width * 3.0 + card_spacing * 2.0;
-    let start_x = (screen_width() - total_width) / 2.0;
-    let card_y = 140.0;
+    let weapons = gs.player.get_weapons();
 
     // Draw all three weapon types
     for (i, weapon_type) in all_weapon_types.iter().enumerate() {
@@ -242,27 +144,52 @@ fn draw_level_up_selection(gs: &GameState) {
         } else {
             // Player doesn't have this weapon - show new weapon card
             let stats = WeaponStats::from(*weapon_type);
-            draw_new_weapon_card(
+
+            // Always show flavor text
+            let flavor_text = match weapon_type {
+                WeaponType::EnergyBall => "Fast projectile that\ntravels straight. You AIM!",
+                WeaponType::Pulse => "Area attack that\nexpands from player.",
+                WeaponType::HomingMissile => "Seeks nearest enemy\nand follows them.",
+            };
+
+            let desc = generate_weapon_description(*weapon_type, &stats, flavor_text);
+            draw_weapon_card(
                 x,
                 card_y,
                 card_width,
                 card_height,
                 &key,
                 &name,
-                &stats,
+                &desc,
                 color,
             );
         }
     }
 
+    // Draw level up subtitle below cards
+    if context == WeaponSelectionContext::LevelUp {
+        let subtitle = format!("Level {} - Choose an Upgrade", gs.player.get_level());
+        let subtitle_size = 24.0;
+        let subtitle_width = measure_text(&subtitle, None, subtitle_size as u16, 1.0).width;
+        draw_text(
+            &subtitle,
+            screen_width() / 2.0 - subtitle_width / 2.0,
+            card_y + card_height + 30.0,
+            subtitle_size,
+            YELLOW,
+        );
+    }
+
     // Draw instruction
-    let instruction = "Press 1-3 to upgrade or acquire weapon";
-    let instruction_size = 20.0;
-    let instruction_width = measure_text(&instruction, None, instruction_size as u16, 1.0).width;
+    let (instruction, instruction_size) = match context {
+        WeaponSelectionContext::InitialSelection => ("Press 1, 2, or 3 to select", 24.0),
+        WeaponSelectionContext::LevelUp => ("Press 1-3 to upgrade or acquire weapon", 20.0),
+    };
+    let instruction_width = measure_text(instruction, None, instruction_size as u16, 1.0).width;
     draw_text(
-        &instruction,
+        instruction,
         screen_width() / 2.0 - instruction_width / 2.0,
-        card_y + card_height + 50.0,
+        card_y + card_height + 60.0,
         instruction_size,
         LIGHTGRAY,
     );
@@ -342,80 +269,6 @@ fn draw_level_up_card(
     );
     let stats_size = 13.0;
     let stats_y_start = y + 175.0;
-    for (i, line) in stats_text.lines().enumerate() {
-        let line_width = measure_text(line, None, stats_size as u16, 1.0).width;
-        draw_text(
-            line,
-            x + width / 2.0 - line_width / 2.0,
-            stats_y_start + (i as f32 * 16.0),
-            stats_size,
-            LIGHTGRAY,
-        );
-    }
-}
-
-fn draw_new_weapon_card(
-    x: f32,
-    y: f32,
-    width: f32,
-    height: f32,
-    key: &str,
-    name: &str,
-    stats: &WeaponStats,
-    color: Color,
-) {
-    // Draw card background
-    draw_rectangle(x, y, width, height, Color::new(0.2, 0.2, 0.3, 0.95));
-
-    // Draw card border
-    draw_rectangle_lines(x, y, width, height, 3.0, color);
-
-    // Draw key indicator
-    let key_text = format!("[{}]", key);
-    let key_size = 28.0;
-    let key_width = measure_text(&key_text, None, key_size as u16, 1.0).width;
-    draw_text(
-        &key_text,
-        x + width / 2.0 - key_width / 2.0,
-        y + 35.0,
-        key_size,
-        color,
-    );
-
-    // Draw weapon icon
-    let icon_y = y + 60.0;
-    draw_weapon_icon(x + width / 2.0, icon_y, name, color);
-
-    // Draw weapon name
-    let name_size = 18.0;
-    let name_width = measure_text(name, None, name_size as u16, 1.0).width;
-    draw_text(
-        name,
-        x + width / 2.0 - name_width / 2.0,
-        y + 120.0,
-        name_size,
-        WHITE,
-    );
-
-    // Draw "NEW" text
-    let new_text = "NEW WEAPON";
-    let new_size = 16.0;
-    let new_width = measure_text(new_text, None, new_size as u16, 1.0).width;
-    draw_text(
-        new_text,
-        x + width / 2.0 - new_width / 2.0,
-        y + 145.0,
-        new_size,
-        SKYBLUE,
-    );
-
-    // Draw stats
-    let stats_text = format!(
-        "Cooldown: {:.1}s\nDamage: {}",
-        stats.cooldown, stats.projectile_stats.damage as i32
-    );
-    let stats_size = 13.0;
-    let stats_y_start = y + 170.0;
     for (i, line) in stats_text.lines().enumerate() {
         let line_width = measure_text(line, None, stats_size as u16, 1.0).width;
         draw_text(
